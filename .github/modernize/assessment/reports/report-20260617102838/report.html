@@ -1,0 +1,1883 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Assessment - piggymetrics</title>
+<style>
+:root {
+  --bg-primary: #ffffff;
+  --bg-card: #f8f9fa;
+  --bg-page: #f0f1f3;
+  --text-primary: #24292f;
+  --text-secondary: #57606a;
+  --text-muted: #6b7280;
+  --border-color: #d0d7de;
+  --border-light: #e1e4e8;
+  --link-color: #2563eb;
+  --color-mandatory: #E3008C;
+  --color-potential: #637CEF;
+  --color-optional: #A19F9D;
+  --font-family: 'Segoe UI', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+  --font-mono: 'Cascadia Code', 'Consolas', 'Courier New', monospace;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-family); font-size: 13px; color: var(--text-primary); background: var(--bg-primary); line-height: 1.5; margin: 0; padding: 0; }
+a { color: var(--link-color); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Page layout ───────────────────────────────────────────── */
+.main { margin: 0; padding: 24px 32px; background: var(--bg-primary); }
+.back-link { color: var(--text-muted); font-size: 13px; margin-bottom: 16px; display: block; }
+h1 { font-weight: 600; font-size: 20px; color: var(--text-primary); margin-bottom: 20px; }
+
+/* ── Report cards (matches VS Code .vscode-report-card) ──── */
+.report-card { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 4px; padding: 12px; margin-bottom: 20px; }
+.report-card h2 { font-size: 14px; font-weight: 600; margin: 0; color: var(--text-primary); }
+.report-card-body { margin-top: 16px; }
+
+/* ── Component Information (two-column) ────────────────── */
+.app-info-container { display: flex; gap: 8px; flex-wrap: wrap; }
+.app-info-column { flex: 1; min-width: 200px; display: flex; flex-direction: column; gap: 8px; }
+.app-info-row { display: flex; align-items: baseline; }
+.app-info-label { width: 136px; flex-shrink: 0; font-weight: 600; color: var(--text-primary); }
+.app-info-value { flex: 1; color: var(--text-primary); }
+
+/* ── Issue Summary (pie charts + legend) ─────────────────── */
+.cards-container { display: flex; align-items: stretch; gap: 20px; flex-wrap: wrap; }
+.issue-summary-card { flex: 2; }
+.domain-summary-container { display: flex; flex-wrap: wrap; gap: 20px; justify-content: space-around; }
+.domain-summary-item { flex: 1; min-width: 120px; text-align: center; padding: 0 16px; border-right: 1px solid var(--border-light); }
+.domain-summary-item:last-child { border-right: none; }
+.domain-summary-item h3 { font-size: 13px; font-weight: 600; color: var(--text-primary); margin-top: 8px; }
+.domain-summary-item .count { font-size: 12px; color: var(--text-secondary); }
+.criticality-legend { display: flex; flex-wrap: wrap; gap: 15px; padding-top: 12px; justify-content: center; }
+.criticality-legend .legend-item { display: flex; align-items: center; gap: 4px; font-size: 12px; color: var(--text-secondary); }
+.legend-swatch { display: inline-block; width: 1em; height: 1em; border-radius: 2px; }
+
+/* ── Issue list tables ───────────────────────────────────── */
+.issue-section { margin-top: 20px; }
+.issue-section h2 { font-size: 14px; font-weight: 600; margin-bottom: 8px; }
+.issue-table { width: 100%; border-collapse: collapse; table-layout: fixed; min-width: 600px; }
+.issue-table th { text-align: left; text-transform: uppercase; font-weight: 600; font-size: calc(13px * 0.875); padding: 6px 8px; background: var(--bg-card); border-bottom: 1px solid var(--border-color); color: var(--text-secondary); position: sticky; top: 0; z-index: 1; }
+.issue-table td { padding: 12px 8px; border-bottom: 1px solid var(--border-light); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: middle; }
+.col-issue { width: 55%; }
+.col-criticality { width: 25%; }
+.col-storypoint { width: 20%; }
+
+/* ── Target dropdown ─────────────────────────────────────── */
+.target-select-container { margin: 4px 0 16px 0; display: flex; align-items: center; gap: 8px; }
+.target-select-container label { font-weight: 600; color: var(--text-primary); font-size: 14px; }
+.target-select-container select { font-family: var(--font-family); font-size: 13px; padding: 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); color: var(--text-primary); cursor: pointer; }
+
+/* ── Filter bar ──────────────────────────────────────────── */
+.filter-bar { display: flex; flex-wrap: wrap; gap: 16px; margin: 16px 0 8px 0; align-items: center; }
+.multi-select { position: relative; display: inline-block; min-width: 140px; }
+.multi-select-btn { font-family: var(--font-family); font-size: 13px; padding: 4px 24px 4px 8px; border: 1px solid var(--border-color); border-radius: 4px; background: var(--bg-primary); color: var(--text-primary); cursor: pointer; width: 100%; text-align: left; position: relative; white-space: nowrap; }
+.multi-select-btn::after { content: '\25BE'; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); font-size: 11px; color: var(--text-secondary); }
+.multi-select-dropdown { display: none; position: absolute; top: 100%; left: 0; min-width: 100%; background: var(--bg-primary); border: 1px solid var(--border-color); border-radius: 4px; box-shadow: 0 4px 12px rgba(0,0,0,0.1); z-index: 100; margin-top: 2px; }
+.multi-select.open .multi-select-dropdown { display: block; }
+.multi-select-option { display: flex; align-items: center; gap: 6px; padding: 5px 10px; cursor: pointer; font-size: 13px; white-space: nowrap; }
+.multi-select-option:hover { background: var(--bg-secondary); }
+.multi-select-option input[type=checkbox] { margin: 0; cursor: pointer; }
+.clear-filters { font-size: 12px; color: var(--link-color); cursor: pointer; margin-left: 4px; }
+
+/* ── Criticality labels (colored square + text) ──────────── */
+.crit-label { display: inline-flex; align-items: center; gap: 6px; font-size: 12px; white-space: nowrap; }
+.crit-square { display: inline-block; width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+.crit-square-mandatory { background: var(--color-mandatory); }
+.crit-square-potential { background: var(--color-potential); }
+.crit-square-optional { background: var(--color-optional); }
+
+/* ── Expandable rows ─────────────────────────────────────── */
+.expand-btn { background: none; border: none; cursor: pointer; width: 20px; height: 20px; display: inline-flex; align-items: center; justify-content: center; color: var(--text-muted); font-size: 11px; transition: transform 0.15s; padding: 0; vertical-align: middle; flex-shrink: 0; }
+.expand-btn.open { transform: rotate(90deg); }
+.issue-title-cell { display: flex; align-items: center; gap: 4px; }
+.detail-row td { padding: 0; border-bottom: 1px solid var(--border-light); white-space: normal; overflow: visible; text-overflow: clip; }
+.detail-content { display: flex; gap: 0; padding: 8px 8px 8px 32px; min-width: 0; }
+.file-list { flex: 0 0 50%; min-width: 0; overflow: hidden; }
+.file-list table { width: 100%; border-collapse: collapse; }
+.file-list th { font-size: calc(13px * 0.875); text-transform: uppercase; font-weight: 600; color: var(--text-secondary); padding: 6px 8px; border-bottom: 1px solid var(--border-color); text-align: left; height: 32px; }
+.file-list td { font-size: 13px; padding: 6px 8px; border-bottom: 1px solid var(--border-light); color: var(--text-primary); }
+.file-list .file-path { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 300px; display: block; }
+.file-list .position { font-family: var(--font-mono); font-size: 12px; color: var(--text-secondary); }
+.explanation-panel { flex: 1; padding-left: 16px; min-width: 0; overflow-wrap: break-word; word-wrap: break-word; }
+.explanation-panel h4 { font-size: calc(13px * 0.875); text-transform: uppercase; font-weight: 600; color: var(--text-secondary); padding: 6px 0; border-bottom: 1px solid var(--border-color); height: 32px; margin: 0; }
+.explanation-panel p { font-size: 13px; padding: 8px 0; color: var(--text-primary); line-height: 1.6; white-space: normal; word-break: break-word; }
+
+/* ── Experimental badge ──────────────────────────────────── */
+.badge-experimental { display: inline-block; padding: 2px 8px; border-radius: 4px; font-size: 11px; font-weight: 600; background: #fef9c3; color: #854d0e; vertical-align: middle; margin-left: 8px; cursor: default; }
+
+/* ── Footer ──────────────────────────────────────────────── */
+.footer { text-align: center; margin-top: 24px; color: var(--text-muted); font-size: 13px; }
+
+/* ── Responsive ──────────────────────────────────────────── */
+@media (max-width: 800px) {
+  .main { padding: 16px; }
+  .app-info-container { flex-direction: column; }
+  .domain-summary-container { flex-direction: column; }
+  .domain-summary-item { border-right: none; border-bottom: 1px solid var(--border-light); padding-bottom: 12px; }
+  .detail-content { flex-direction: column; }
+  .file-list { flex: none; width: 100%; }
+  .explanation-panel { padding-left: 0; padding-top: 8px; }
+}
+/* ── Tab navigation ──────────────────────────────────────── */
+.tab-nav { display: flex; gap: 0; border-bottom: 1px solid var(--border-color); margin-bottom: 28px; flex-wrap: wrap; }
+.tab-btn { background: none; border: none; border-bottom: 2px solid transparent; padding: 10px 18px; font-size: 13px; font-family: var(--font-family); color: var(--text-secondary); cursor: pointer; margin-bottom: -1px; white-space: nowrap; position: relative; }
+.tab-btn:hover { color: var(--text-primary); }
+.tab-btn.active { color: var(--link-color); border-bottom-color: var(--link-color); font-weight: 600; }
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* ── Tooltip on tab ──────────────────────────────────────── */
+.tab-btn[data-tooltip]::after { content: attr(data-tooltip); position: absolute; bottom: calc(100% + 8px); left: 50%; transform: translateX(-50%); background: #24292f; color: #ffffff; font-size: 12px; font-weight: 400; padding: 6px 10px; border-radius: 4px; white-space: normal; width: max-content; max-width: 260px; text-align: center; pointer-events: none; opacity: 0; transition: opacity 0.15s; z-index: 100; }
+.tab-btn[data-tooltip]:hover::after { opacity: 1; }
+
+/* ── Fact content — prose column ─────────────────────────── */
+.fact-content { max-width: 860px; margin: 0 auto; line-height: 1.75; color: var(--text-primary); font-size: 14px; }
+.fact-content h1 { font-size: 22px; font-weight: 700; margin: 0 0 6px 0; color: var(--text-primary); letter-spacing: -0.01em; }
+.fact-content h1 + p { margin-top: 6px; color: var(--text-secondary); font-size: 14px; margin-bottom: 24px; }
+.fact-content h2 { font-size: 17px; font-weight: 700; margin: 36px 0 12px 0; padding-bottom: 6px; border-bottom: 1px solid var(--border-color); color: var(--text-primary); letter-spacing: -0.01em; }
+.fact-content h3 { font-size: 14px; font-weight: 700; margin: 24px 0 8px 0; color: var(--text-primary); text-transform: uppercase; letter-spacing: 0.04em; font-size: 12px; color: var(--text-secondary); }
+.fact-content p { margin: 10px 0; color: var(--text-primary); }
+.fact-content ul, .fact-content ol { margin: 10px 0 10px 22px; }
+.fact-content li { margin: 5px 0; }
+.fact-content a { color: var(--link-color); }
+.fact-content a:hover { text-decoration: underline; }
+
+/* ── Fact tables ─────────────────────────────────────────── */
+.table-wrap { overflow-x: auto; margin: 16px 0; }
+.fact-content table { border-collapse: collapse; width: 100%; margin: 16px 0; font-size: 13px; border-radius: 6px; overflow: hidden; border: 1px solid var(--border-color); }
+.fact-content thead { background: var(--bg-card); }
+.fact-content th { text-align: left; font-weight: 600; font-size: 12px; text-transform: uppercase; letter-spacing: 0.04em; padding: 8px 14px; border-bottom: 1px solid var(--border-color); color: var(--text-secondary); }
+.fact-content td { padding: 9px 14px; border-bottom: 1px solid var(--border-light); vertical-align: top; color: var(--text-primary); }
+.fact-content tr:last-child td { border-bottom: none; }
+.fact-content tbody tr:hover { background: #f6f8fa; }
+
+/* ── Fact code ───────────────────────────────────────────── */
+.fact-content code { font-family: var(--font-mono); font-size: 12px; background: #f0f1f3; padding: 2px 6px; border-radius: 4px; color: #c7254e; }
+.fact-content pre { background: #f6f8fa; border: 1px solid var(--border-light); border-radius: 6px; padding: 14px 16px; overflow-x: auto; margin: 14px 0; }
+.fact-content pre code { background: none; color: var(--text-primary); padding: 0; border-radius: 0; }
+.fact-content hr { border: none; border-top: 1px solid var(--border-light); margin: 28px 0; }
+.fact-content strong { font-weight: 600; }
+.fact-content em { font-style: italic; }
+.fact-content blockquote { border-left: 3px solid var(--border-color); margin: 12px 0; padding: 4px 16px; color: var(--text-secondary); }
+.fact-unavailable { padding: 32px 0; }
+.fact-unavailable h3 { font-size: 16px; font-weight: 600; color: var(--text-primary); text-transform: none; letter-spacing: 0; margin: 0 0 12px 0; }
+.fact-unavailable p { margin: 0 0 8px 0; color: var(--text-secondary); }
+.fact-unavailable ol, .fact-unavailable ul { margin: 0 0 0 22px; color: var(--text-primary); }
+.fact-unavailable li { margin: 6px 0; }
+
+/* ── Mermaid diagram card ─────────────────────────────────── */
+.mermaid { background: var(--bg-card); border: 1px solid var(--border-light); border-radius: 8px; padding: 24px 16px; margin: 20px 0; overflow-x: auto; text-align: center; cursor: pointer; position: relative; }
+.mermaid:hover { border-color: var(--border-color); }
+.mermaid svg { max-width: 100%; height: auto !important; display: inline-block; }
+.mermaid-zoom-hint { position: absolute; top: 8px; right: 10px; font-size: 11px; color: var(--text-muted); opacity: 0; transition: opacity 0.15s; pointer-events: none; }
+.mermaid:hover .mermaid-zoom-hint { opacity: 1; }
+
+/* ── Diagram lightbox ────────────────────────────────────── */
+.diagram-lightbox { display: none; position: fixed; inset: 0; z-index: 1000; background: rgba(0,0,0,0.7); backdrop-filter: blur(2px); align-items: center; justify-content: center; cursor: zoom-out; padding: 48px 32px; }
+.diagram-lightbox.open { display: flex; }
+.diagram-lightbox-inner { background: #ffffff; border-radius: 10px; padding: 32px; width: 88vw; max-height: 88vh; overflow: hidden; cursor: default; box-shadow: 0 24px 64px rgba(0,0,0,0.35); display: flex; align-items: center; justify-content: center; }
+.diagram-lightbox-inner svg { width: 100% !important; height: auto !important; max-height: 76vh; display: block; }
+.diagram-lightbox-close { position: fixed; top: 20px; right: 24px; background: #ffffff; border: none; border-radius: 50%; width: 36px; height: 36px; font-size: 18px; cursor: pointer; display: flex; align-items: center; justify-content: center; color: var(--text-primary); box-shadow: 0 2px 8px rgba(0,0,0,0.2); z-index: 1001; }
+.diagram-lightbox-close:hover { background: var(--bg-card); }
+.diagram-lightbox-hint { position: fixed; bottom: 20px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,0.55); color: #ffffff; font-size: 12px; padding: 6px 14px; border-radius: 20px; pointer-events: none; white-space: nowrap; z-index: 1001; }
+</style>
+<script>
+window.__mermaidPending = [];
+window.__mermaidReady = false;
+window.__renderMermaidIn = function(container) {
+  if (container) { window.__mermaidPending.push(container); }
+};
+</script>
+<script type="module">
+import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+mermaid.initialize({ startOnLoad: false, theme: 'default', flowchart: { useMaxWidth: true }, sequence: { useMaxWidth: true } });
+
+window.__renderMermaidIn = function(container) {
+  var nodes = container ? container.querySelectorAll('.mermaid:not([data-processed])') : [];
+  if (nodes.length > 0) {
+    mermaid.run({ nodes: Array.from(nodes) }).then(function() {
+      nodes.forEach(function(node) {
+        if (!node.querySelector('.mermaid-zoom-hint')) {
+          var hint = document.createElement('span');
+          hint.className = 'mermaid-zoom-hint';
+          hint.textContent = 'Click to expand';
+          node.appendChild(hint);
+        }
+      });
+    });
+  }
+};
+
+var drained = new Set();
+(window.__mermaidPending || []).forEach(function(c) {
+  if (!drained.has(c)) { drained.add(c); window.__renderMermaidIn(c); }
+});
+window.__mermaidPending = [];
+window.__mermaidReady = true;
+
+function renderActivePanels() {
+  document.querySelectorAll('.tab-panel.active').forEach(function(p) {
+    if (!drained.has(p)) { drained.add(p); window.__renderMermaidIn(p); }
+  });
+}
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', renderActivePanels);
+} else {
+  renderActivePanels();
+}
+</script>
+</head><body>
+<div id="diagram-lightbox" class="diagram-lightbox" role="dialog" aria-modal="true">
+  <button class="diagram-lightbox-close" id="diagram-lightbox-close" aria-label="Close">&#x2715;</button>
+  <div class="diagram-lightbox-hint">Scroll to zoom &nbsp;&middot;&nbsp; Drag to pan &nbsp;&middot;&nbsp; Double-click to reset</div>
+  <div class="diagram-lightbox-inner" id="diagram-lightbox-inner"></div>
+</div>
+<div class="main">
+<h1>piggymetrics</h1>
+<div class="report-card">
+  <h2>Component Information</h2>
+  <div class="report-card-body">
+    <div class="app-info-container">
+      <div class="app-info-column">
+        <div class="app-info-row"><span class="app-info-label">Component Name</span><span class="app-info-value">piggymetrics</span></div>
+        <div class="app-info-row"><span class="app-info-label">Java Version</span><span class="app-info-value">1.8</span></div>
+        <div class="app-info-row"><span class="app-info-label">Effort</span><span class="app-info-value" id="effort-display">M (total story points: 46)</span></div>
+      </div>
+      <div class="app-info-column">
+        <div class="app-info-row"><span class="app-info-label">Build Tools</span><span class="app-info-value">Maven</span></div>
+        <div class="app-info-row"><span class="app-info-label">Frameworks</span><span class="app-info-value">Spring Boot, Spring Cloud, Spring</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+<nav class="tab-nav">
+  <button class="tab-btn active" data-tab="tab-issues" data-tooltip="Issues detected in the source code">Issues</button>
+  <button class="tab-btn" data-tab="tab-arch" data-tooltip="How the app&#x27;s layers connect — from UI to data.">Architecture</button>
+  <button class="tab-btn" data-tab="tab-api" data-tooltip="Endpoints exposed by this app and how services communicate.">API Contracts</button>
+  <button class="tab-btn" data-tab="tab-config" data-tooltip="Environment settings, runtime profiles, and deployment manifests.">Configuration</button>
+  <button class="tab-btn" data-tab="tab-workflows" data-tooltip="Domain entities and the core flows users move through.">Business Workflows</button>
+  <button class="tab-btn" data-tab="tab-deps" data-tooltip="Libraries and frameworks this app depends on, grouped by category.">Dependencies</button>
+  <button class="tab-btn" data-tab="tab-data" data-tooltip="Database schema, entity relationships, and persistence behavior.">Data Model</button>
+</nav>
+<div id="tab-issues" class="tab-panel active">
+<div class="target-select-container">
+  <label for="target-select">Target Compute Service:</label>
+  <select id="target-select" onchange="onTargetChange(this.value)">
+    <option value="azure-aks">Azure Kubernetes Service</option>
+  </select>
+</div>
+<div class="report-card">
+  <h2>Issue Summary</h2>
+  <div class="report-card-body">
+    <div class="domain-summary-container" id="donut-container">
+      <div class="domain-summary-item">
+<svg viewBox="0 0 100 100" width="100" height="100" style="display:block;margin:0 auto;transform:rotate(-90deg);">
+  <circle cx="50" cy="50" r="35" fill="none" stroke="var(--color-mandatory)" stroke-width="15" stroke-dasharray="108.46 219.91" stroke-dashoffset="-0.00"/>
+  <circle cx="50" cy="50" r="35" fill="none" stroke="var(--color-potential)" stroke-width="15" stroke-dasharray="53.48 219.91" stroke-dashoffset="-109.96"/>
+  <circle cx="50" cy="50" r="35" fill="none" stroke="var(--color-optional)" stroke-width="15" stroke-dasharray="53.48 219.91" stroke-dashoffset="-164.93"/>
+</svg>
+
+        <h3>Cloud Readiness</h3>
+        <div class="count">8 issues</div>
+      </div>
+      <div class="domain-summary-item">
+<svg viewBox="0 0 100 100" width="100" height="100" style="display:block;margin:0 auto;transform:rotate(-90deg);">
+  <circle cx="50" cy="50" r="35" fill="none" stroke="var(--color-mandatory)" stroke-width="15" stroke-dasharray="219.91 219.91" stroke-dashoffset="-0.00"/>
+</svg>
+
+        <h3>Java Upgrade</h3>
+        <div class="count">1 issue</div>
+      </div>
+    </div>
+    <div class="criticality-legend">
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--color-mandatory)"></span>Mandatory</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--color-potential)"></span>Potential</div>
+      <div class="legend-item"><span class="legend-swatch" style="background:var(--color-optional)"></span>Optional</div>
+    </div>
+  </div>
+</div>
+<div class="filter-bar" id="filter-bar">
+  <div class="multi-select" id="domain-ms">
+    <button class="multi-select-btn" onclick="toggleMultiSelect('domain-ms')">Domain</button>
+    <div class="multi-select-dropdown">
+      <label class="multi-select-option"><input type="checkbox" value="cloud-readiness" onchange="onMultiSelectChange('domain-ms','Domain')"/> Cloud Readiness</label>
+      <label class="multi-select-option"><input type="checkbox" value="java-upgrade" onchange="onMultiSelectChange('domain-ms','Domain')"/> Java Upgrade</label>
+    </div>
+  </div>
+  <div class="multi-select" id="criticality-ms">
+    <button class="multi-select-btn" onclick="toggleMultiSelect('criticality-ms')">Criticality</button>
+    <div class="multi-select-dropdown">
+      <label class="multi-select-option"><input type="checkbox" value="mandatory" onchange="onMultiSelectChange('criticality-ms','Criticality')"/> Mandatory</label>
+      <label class="multi-select-option"><input type="checkbox" value="potential" onchange="onMultiSelectChange('criticality-ms','Criticality')"/> Potential</label>
+      <label class="multi-select-option"><input type="checkbox" value="optional" onchange="onMultiSelectChange('criticality-ms','Criticality')"/> Optional</label>
+    </div>
+  </div>
+  <a class="clear-filters" href="javascript:void(0)" onclick="clearAllFilters()">Clear all</a>
+</div>
+<div class="issue-section" data-domain="cloud-readiness">
+  <h2>Cloud Readiness</h2>
+  <table class="issue-table">
+    <colgroup><col class="col-issue"/><col class="col-criticality"/><col class="col-storypoint"/></colgroup>
+    <thead><tr><th>Issue Category</th><th>Criticality</th><th>Story Point</th></tr></thead>
+    <tbody>
+    <tr class="issue-row" data-criticality="mandatory" data-targets='{&quot;azure-aks&quot;:{&quot;effort&quot;:3,&quot;severity&quot;:&quot;mandatory&quot;},&quot;azure-appservice&quot;:{&quot;effort&quot;:3,&quot;severity&quot;:&quot;mandatory&quot;},&quot;azure-container-apps&quot;:{&quot;effort&quot;:3,&quot;severity&quot;:&quot;mandatory&quot;}}' data-default-effort="3" data-default-severity="mandatory" data-rule="unsecure-network-protocol-00000" onclick="toggleRow('row-cloudreadiness-0', this)" style="cursor:pointer;">
+      <td style="white-space:normal;"><div class="issue-title-cell"><button class="expand-btn" id="btn-row-cloudreadiness-0">&#x276F;</button> Use of unsecured network protocols or URI libraries</div></td>
+      <td class="crit-cell"><span class="crit-label"><span class="crit-square crit-square-mandatory"></span>Mandatory</span></td>
+      <td class="sp-cell">3</td>
+    </tr>
+    <tr class="detail-row" id="row-cloudreadiness-0" style="display:none;">
+      <td colspan="3">
+        <div class="detail-content">
+          <div class="file-list">
+            <table><colgroup><col style="width:70%"/><col style="width:30%"/></colgroup>
+            <thead><tr><th>File</th><th>Position</th></tr></thead><tbody>
+            <tr><td><span class="file-path" title="account-service/src/main/resources/bootstrap.yml">account-service/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            <tr><td><span class="file-path" title="notification-service/src/main/resources/bootstrap.yml">notification-service/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            <tr><td><span class="file-path" title="statistics-service/src/main/resources/bootstrap.yml">statistics-service/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            <tr><td><span class="file-path" title="registry/src/main/resources/bootstrap.yml">registry/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            <tr><td><span class="file-path" title="config/src/main/resources/shared/gateway.yml">config/src/main/resources/shared/gateway.yml</span></td><td><span class="position">Line 22</span></td></tr>
+            <tr><td><span class="file-path" title="config/src/main/resources/shared/notification-service.yml">config/src/main/resources/shared/notification-service.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            <tr><td><span class="file-path" title="config/src/main/resources/shared/statistics-service.yml">config/src/main/resources/shared/statistics-service.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            <tr><td><span class="file-path" title="auth-service/src/main/resources/bootstrap.yml">auth-service/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            <tr><td><span class="file-path" title="turbine-stream-service/src/main/resources/bootstrap.yml">turbine-stream-service/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            <tr><td><span class="file-path" title="gateway/src/main/resources/bootstrap.yml">gateway/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            <tr><td><span class="file-path" title="monitoring/src/main/resources/bootstrap.yml">monitoring/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            <tr><td><span class="file-path" title="config/src/main/resources/shared/account-service.yml">config/src/main/resources/shared/account-service.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            <tr><td><span class="file-path" title="config/src/main/resources/shared/application.yml">config/src/main/resources/shared/application.yml</span></td><td><span class="position">Line 18</span></td></tr>
+            <tr><td><span class="file-path" title="config/src/main/resources/shared/application.yml">config/src/main/resources/shared/application.yml</span></td><td><span class="position">Line 23</span></td></tr>
+            </tbody></table>
+          </div>
+          <div class="explanation-panel">
+            <h4>Explanation</h4>
+            <div><p>Using secured protocols such as HTTPS and SFTP (over HTTP and FTP) should now be the norm as applications are more and more exposed and interconnected. <br/>This CloudReady patterns looks for unescured URI in the source code or deprecated URI libraries. <br/>Ideally, URLs should be replaced in your source code by secured protocols HTTPS and SFTP (and ensure the infrastructure implements these protocols for the resources your application calls, uses or references).</p></div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    <tr class="issue-row" data-criticality="mandatory" data-targets='{&quot;azure-aks&quot;:{&quot;effort&quot;:3,&quot;severity&quot;:&quot;mandatory&quot;},&quot;azure-appservice&quot;:{&quot;effort&quot;:3,&quot;severity&quot;:&quot;mandatory&quot;},&quot;azure-container-apps&quot;:{&quot;effort&quot;:3,&quot;severity&quot;:&quot;mandatory&quot;}}' data-default-effort="3" data-default-severity="mandatory" data-rule="cra-hardcoded-credential-default-pwd-04000" onclick="toggleRow('row-cloudreadiness-1', this)" style="cursor:pointer;">
+      <td style="white-space:normal;"><div class="issue-title-cell"><button class="expand-btn" id="btn-row-cloudreadiness-1">&#x276F;</button> CRA: Default or well-known password detected</div></td>
+      <td class="crit-cell"><span class="crit-label"><span class="crit-square crit-square-mandatory"></span>Mandatory</span></td>
+      <td class="sp-cell">3</td>
+    </tr>
+    <tr class="detail-row" id="row-cloudreadiness-1" style="display:none;">
+      <td colspan="3">
+        <div class="detail-content">
+          <div class="file-list">
+            <table><colgroup><col style="width:70%"/><col style="width:30%"/></colgroup>
+            <thead><tr><th>File</th><th>Position</th></tr></thead><tbody>
+            <tr><td><span class="file-path" title="account-service/src/main/java/com/piggymetrics/account/domain/User.java">account-service/src/main/java/com/piggymetrics/account/domain/User.java</span></td><td><span class="position">Line 30</span></td></tr>
+            <tr><td><span class="file-path" title="auth-service/src/main/java/com/piggymetrics/auth/domain/User.java">auth-service/src/main/java/com/piggymetrics/auth/domain/User.java</span></td><td><span class="position">Line 38</span></td></tr>
+            <tr><td><span class="file-path" title="notification-service/src/test/resources/application.yml">notification-service/src/test/resources/application.yml</span></td><td><span class="position">Line 23</span></td></tr>
+            <tr><td><span class="file-path" title="account-service/src/test/java/com/piggymetrics/account/controller/AccountControllerTest.java">account-service/src/test/java/com/piggymetrics/account/controller/AccountControllerTest.java</span></td><td><span class="position">Line 129</span></td></tr>
+            <tr><td><span class="file-path" title="auth-service/src/test/java/com/piggymetrics/auth/controller/UserControllerTest.java">auth-service/src/test/java/com/piggymetrics/auth/controller/UserControllerTest.java</span></td><td><span class="position">Line 49</span></td></tr>
+            <tr><td><span class="file-path" title="auth-service/src/test/java/com/piggymetrics/auth/repository/UserRepositoryTest.java">auth-service/src/test/java/com/piggymetrics/auth/repository/UserRepositoryTest.java</span></td><td><span class="position">Line 30</span></td></tr>
+            <tr><td><span class="file-path" title="auth-service/src/test/java/com/piggymetrics/auth/service/UserServiceTest.java">auth-service/src/test/java/com/piggymetrics/auth/service/UserServiceTest.java</span></td><td><span class="position">Line 33</span></td></tr>
+            <tr><td><span class="file-path" title="auth-service/src/test/java/com/piggymetrics/auth/service/UserServiceTest.java">auth-service/src/test/java/com/piggymetrics/auth/service/UserServiceTest.java</span></td><td><span class="position">Line 44</span></td></tr>
+            </tbody></table>
+          </div>
+          <div class="explanation-panel">
+            <h4>Explanation</h4>
+            <div><p><strong>EU Cyber Resilience Act (Annex I, Part I, Section 2(b))</strong> requires a <strong>secure by default configuration</strong>. The use of default, well-known, or trivial passwords violates the secure-by-default principle.</p><p>ETSI EN 303 645 (referenced standard for CRA compliance) explicitly prohibits universal default passwords in Provision 5.1-1.</p><p><strong>Recommended actions:</strong></p><ul><li>Remove all default/well-known passwords from code and configuration.</li><li>Require unique, strong passwords during initial setup.</li><li>Use generated secrets that are unique per deployment.</li><li>Implement password complexity requirements.</li></ul></div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    <tr class="issue-row" data-criticality="mandatory" data-targets='{&quot;azure-aks&quot;:{&quot;effort&quot;:8,&quot;severity&quot;:&quot;mandatory&quot;},&quot;azure-appservice&quot;:{&quot;effort&quot;:8,&quot;severity&quot;:&quot;mandatory&quot;},&quot;azure-container-apps&quot;:{&quot;effort&quot;:8,&quot;severity&quot;:&quot;mandatory&quot;}}' data-default-effort="8" data-default-severity="mandatory" data-rule="cra-hardcoded-credential-password-01000" onclick="toggleRow('row-cloudreadiness-2', this)" style="cursor:pointer;">
+      <td style="white-space:normal;"><div class="issue-title-cell"><button class="expand-btn" id="btn-row-cloudreadiness-2">&#x276F;</button> CRA: Hard-coded password in Java source code</div></td>
+      <td class="crit-cell"><span class="crit-label"><span class="crit-square crit-square-mandatory"></span>Mandatory</span></td>
+      <td class="sp-cell">8</td>
+    </tr>
+    <tr class="detail-row" id="row-cloudreadiness-2" style="display:none;">
+      <td colspan="3">
+        <div class="detail-content">
+          <div class="file-list">
+            <table><colgroup><col style="width:70%"/><col style="width:30%"/></colgroup>
+            <thead><tr><th>File</th><th>Position</th></tr></thead><tbody>
+            <tr><td><span class="file-path" title="account-service/src/test/java/com/piggymetrics/account/controller/AccountControllerTest.java">account-service/src/test/java/com/piggymetrics/account/controller/AccountControllerTest.java</span></td><td><span class="position">Line 129</span></td></tr>
+            <tr><td><span class="file-path" title="auth-service/src/test/java/com/piggymetrics/auth/controller/UserControllerTest.java">auth-service/src/test/java/com/piggymetrics/auth/controller/UserControllerTest.java</span></td><td><span class="position">Line 49</span></td></tr>
+            <tr><td><span class="file-path" title="auth-service/src/test/java/com/piggymetrics/auth/controller/UserControllerTest.java">auth-service/src/test/java/com/piggymetrics/auth/controller/UserControllerTest.java</span></td><td><span class="position">Line 62</span></td></tr>
+            <tr><td><span class="file-path" title="auth-service/src/test/java/com/piggymetrics/auth/repository/UserRepositoryTest.java">auth-service/src/test/java/com/piggymetrics/auth/repository/UserRepositoryTest.java</span></td><td><span class="position">Line 30</span></td></tr>
+            <tr><td><span class="file-path" title="auth-service/src/test/java/com/piggymetrics/auth/service/UserServiceTest.java">auth-service/src/test/java/com/piggymetrics/auth/service/UserServiceTest.java</span></td><td><span class="position">Line 33</span></td></tr>
+            <tr><td><span class="file-path" title="auth-service/src/test/java/com/piggymetrics/auth/service/UserServiceTest.java">auth-service/src/test/java/com/piggymetrics/auth/service/UserServiceTest.java</span></td><td><span class="position">Line 44</span></td></tr>
+            </tbody></table>
+          </div>
+          <div class="explanation-panel">
+            <h4>Explanation</h4>
+            <div><p><strong>EU Cyber Resilience Act (Annex I, Part I, Section 2(b))</strong> requires products to be delivered with a <strong>secure by default configuration</strong> and to protect against unauthorized access using appropriate authentication mechanisms.</p><p>Hard-coded passwords in source code are a critical security vulnerability. They cannot be easily changed, may be exposed through version control systems, and violate the principle of secure by default.</p><p><strong>Recommended actions:</strong></p><ul><li>Move all credentials to a secure secrets management system (e.g., Azure Key Vault, HashiCorp Vault).</li><li>Use environment variables or externalized configuration for sensitive values.</li><li>Use connection pooling with credential providers instead of static credentials.</li><li>For development, use <code>.env</code> files that are excluded from version control.</li></ul></div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    <tr class="issue-row" data-criticality="mandatory" data-targets='{&quot;azure-aks&quot;:{&quot;effort&quot;:8,&quot;severity&quot;:&quot;mandatory&quot;},&quot;azure-appservice&quot;:{&quot;effort&quot;:8,&quot;severity&quot;:&quot;mandatory&quot;},&quot;azure-container-apps&quot;:{&quot;effort&quot;:8,&quot;severity&quot;:&quot;mandatory&quot;}}' data-default-effort="8" data-default-severity="mandatory" data-rule="cra-weak-crypto-password-hash-07000" onclick="toggleRow('row-cloudreadiness-3', this)" style="cursor:pointer;">
+      <td style="white-space:normal;"><div class="issue-title-cell"><button class="expand-btn" id="btn-row-cloudreadiness-3">&#x276F;</button> CRA: Use of weak password hashing (plain MD5/SHA for passwords)</div></td>
+      <td class="crit-cell"><span class="crit-label"><span class="crit-square crit-square-mandatory"></span>Mandatory</span></td>
+      <td class="sp-cell">8</td>
+    </tr>
+    <tr class="detail-row" id="row-cloudreadiness-3" style="display:none;">
+      <td colspan="3">
+        <div class="detail-content">
+          <div class="file-list">
+            <table><colgroup><col style="width:70%"/><col style="width:30%"/></colgroup>
+            <thead><tr><th>File</th><th>Position</th></tr></thead><tbody>
+            <tr><td><span class="file-path" title="auth-service/src/main/java/com/piggymetrics/auth/config/OAuth2AuthorizationConfig.java">auth-service/src/main/java/com/piggymetrics/auth/config/OAuth2AuthorizationConfig.java</span></td><td><span class="position">Line 26</span></td></tr>
+            <tr><td><span class="file-path" title="auth-service/src/main/java/com/piggymetrics/auth/config/OAuth2AuthorizationConfig.java">auth-service/src/main/java/com/piggymetrics/auth/config/OAuth2AuthorizationConfig.java</span></td><td><span class="position">Line 79</span></td></tr>
+            </tbody></table>
+          </div>
+          <div class="explanation-panel">
+            <h4>Explanation</h4>
+            <div><p><strong>EU Cyber Resilience Act (Annex I, Part I, Section 2(b)(c))</strong> requires robust authentication mechanisms and state of the art cryptography.</p><p>Using simple hash algorithms (MD5, SHA-1, SHA-256 without salt/iteration) for password storage is insecure. These hashes can be reversed using rainbow tables or brute-force attacks with modern GPUs.</p><p><strong>Recommended actions:</strong></p><ul><li>Use <strong>bcrypt</strong> (<code>BCryptPasswordEncoder</code> in Spring Security).</li><li>Use <strong>Argon2</strong> (<code>Argon2PasswordEncoder</code> in Spring Security).</li><li>Use <strong>PBKDF2</strong> with at least 600,000 iterations (<code>PBKDF2WithHmacSHA256</code>).</li><li>Use <strong>scrypt</strong> (<code>SCryptPasswordEncoder</code> in Spring Security).</li><li>Ensure all password hashing uses a unique salt per password.</li></ul></div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    <tr class="issue-row" data-criticality="potential" data-targets='{&quot;azure-aks&quot;:{&quot;effort&quot;:5,&quot;severity&quot;:&quot;potential&quot;},&quot;azure-appservice&quot;:{&quot;effort&quot;:5,&quot;severity&quot;:&quot;potential&quot;},&quot;azure-container-apps&quot;:{&quot;effort&quot;:5,&quot;severity&quot;:&quot;potential&quot;}}' data-default-effort="5" data-default-severity="potential" data-rule="azure-database-config-mongodb-02000" onclick="toggleRow('row-cloudreadiness-4', this)" style="cursor:pointer;">
+      <td style="white-space:normal;"><div class="issue-title-cell"><button class="expand-btn" id="btn-row-cloudreadiness-4">&#x276F;</button> MongoDB connection found in configuration file</div></td>
+      <td class="crit-cell"><span class="crit-label"><span class="crit-square crit-square-potential"></span>Potential</span></td>
+      <td class="sp-cell">5</td>
+    </tr>
+    <tr class="detail-row" id="row-cloudreadiness-4" style="display:none;">
+      <td colspan="3">
+        <div class="detail-content">
+          <div class="file-list">
+            <table><colgroup><col style="width:70%"/><col style="width:30%"/></colgroup>
+            <thead><tr><th>File</th><th>Position</th></tr></thead><tbody>
+            <tr><td><span class="file-path" title="account-service/src/test/resources/application.yml">account-service/src/test/resources/application.yml</span></td><td><span class="position">Line 3</span></td></tr>
+            <tr><td><span class="file-path" title="auth-service/src/test/resources/application.yml">auth-service/src/test/resources/application.yml</span></td><td><span class="position">Line 3</span></td></tr>
+            <tr><td><span class="file-path" title="config/src/main/resources/shared/account-service.yml">config/src/main/resources/shared/account-service.yml</span></td><td><span class="position">Line 12</span></td></tr>
+            <tr><td><span class="file-path" title="config/src/main/resources/shared/auth-service.yml">config/src/main/resources/shared/auth-service.yml</span></td><td><span class="position">Line 3</span></td></tr>
+            <tr><td><span class="file-path" title="config/src/main/resources/shared/notification-service.yml">config/src/main/resources/shared/notification-service.yml</span></td><td><span class="position">Line 30</span></td></tr>
+            <tr><td><span class="file-path" title="config/src/main/resources/shared/statistics-service.yml">config/src/main/resources/shared/statistics-service.yml</span></td><td><span class="position">Line 12</span></td></tr>
+            <tr><td><span class="file-path" title="docker-compose.dev.yml">docker-compose.dev.yml</span></td><td><span class="position">Line 23</span></td></tr>
+            <tr><td><span class="file-path" title="docker-compose.dev.yml">docker-compose.dev.yml</span></td><td><span class="position">Line 33</span></td></tr>
+            <tr><td><span class="file-path" title="docker-compose.dev.yml">docker-compose.dev.yml</span></td><td><span class="position">Line 43</span></td></tr>
+            <tr><td><span class="file-path" title="docker-compose.dev.yml">docker-compose.dev.yml</span></td><td><span class="position">Line 53</span></td></tr>
+            <tr><td><span class="file-path" title="docker-compose.yml">docker-compose.yml</span></td><td><span class="position">Line 70</span></td></tr>
+            <tr><td><span class="file-path" title="docker-compose.yml">docker-compose.yml</span></td><td><span class="position">Line 95</span></td></tr>
+            <tr><td><span class="file-path" title="docker-compose.yml">docker-compose.yml</span></td><td><span class="position">Line 121</span></td></tr>
+            <tr><td><span class="file-path" title="docker-compose.yml">docker-compose.yml</span></td><td><span class="position">Line 146</span></td></tr>
+            <tr><td><span class="file-path" title="notification-service/src/test/resources/application.yml">notification-service/src/test/resources/application.yml</span></td><td><span class="position">Line 16</span></td></tr>
+            <tr><td><span class="file-path" title="statistics-service/src/test/resources/application.yml">statistics-service/src/test/resources/application.yml</span></td><td><span class="position">Line 11</span></td></tr>
+            </tbody></table>
+          </div>
+          <div class="explanation-panel">
+            <h4>Explanation</h4>
+            <div><p>The application uses a MongoDB connection string. To migrate a Java application that uses a MongoDB connection string to Azure, you can follow these recommendations:</p><p> * Use a managed <strong>Azure Cosmos DB for MongoDB</strong>: Create a managed Cosmos DB for MongoDB database in Azure and choose the appropriate pricing tier based on your application&#x27;s requirements for performance, storage, and availability.</p><p> * <strong>Connect to Azure Cosmos DB for MongoDB using Service Connector</strong>: Create service connection using <strong>Service Connector</strong> to connect your application to Azure Cosmos DB for MongoDB. Service Connector provides a secure and easy way to connect your application to Azure services without having to manage secrets or credentials in your application code.</p><p> * <strong>Passwordless connections for Azure services</strong>: Consider using passwordless connections for Azure services. You can provide an additional layer of security and convenience for accessing resources in Azure by eliminating the need for passwords. This way you can reduce the risk of password-related vulnerabilities, such as weak passwords or password theft.</p></div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    <tr class="issue-row" data-criticality="potential" data-targets='{&quot;azure-aks&quot;:{&quot;effort&quot;:3,&quot;severity&quot;:&quot;potential&quot;},&quot;azure-appservice&quot;:{&quot;effort&quot;:3,&quot;severity&quot;:&quot;potential&quot;},&quot;azure-container-apps&quot;:{&quot;effort&quot;:3,&quot;severity&quot;:&quot;potential&quot;}}' data-default-effort="3" data-default-severity="potential" data-rule="azure-password-01000" onclick="toggleRow('row-cloudreadiness-5', this)" style="cursor:pointer;">
+      <td style="white-space:normal;"><div class="issue-title-cell"><button class="expand-btn" id="btn-row-cloudreadiness-5">&#x276F;</button> Password found in configuration file</div></td>
+      <td class="crit-cell"><span class="crit-label"><span class="crit-square crit-square-potential"></span>Potential</span></td>
+      <td class="sp-cell">3</td>
+    </tr>
+    <tr class="detail-row" id="row-cloudreadiness-5" style="display:none;">
+      <td colspan="3">
+        <div class="detail-content">
+          <div class="file-list">
+            <table><colgroup><col style="width:70%"/><col style="width:30%"/></colgroup>
+            <thead><tr><th>File</th><th>Position</th></tr></thead><tbody>
+            <tr><td><span class="file-path" title="account-service/src/main/resources/bootstrap.yml">account-service/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 8</span></td></tr>
+            <tr><td><span class="file-path" title="auth-service/src/main/resources/bootstrap.yml">auth-service/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 8</span></td></tr>
+            <tr><td><span class="file-path" title="config/src/main/resources/application.yml">config/src/main/resources/application.yml</span></td><td><span class="position">Line 11</span></td></tr>
+            <tr><td><span class="file-path" title="gateway/src/main/resources/bootstrap.yml">gateway/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 8</span></td></tr>
+            <tr><td><span class="file-path" title="monitoring/src/main/resources/bootstrap.yml">monitoring/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 8</span></td></tr>
+            <tr><td><span class="file-path" title="notification-service/src/main/resources/bootstrap.yml">notification-service/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 8</span></td></tr>
+            <tr><td><span class="file-path" title="notification-service/src/test/resources/application.yml">notification-service/src/test/resources/application.yml</span></td><td><span class="position">Line 23</span></td></tr>
+            <tr><td><span class="file-path" title="registry/src/main/resources/bootstrap.yml">registry/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 8</span></td></tr>
+            <tr><td><span class="file-path" title="statistics-service/src/main/resources/bootstrap.yml">statistics-service/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 8</span></td></tr>
+            <tr><td><span class="file-path" title="turbine-stream-service/src/main/resources/bootstrap.yml">turbine-stream-service/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 8</span></td></tr>
+            </tbody></table>
+          </div>
+          <div class="explanation-panel">
+            <h4>Explanation</h4>
+            <div><p>Using clear passwords in property files is a security risk, as they can be easily compromised if the files are accessed by unauthorized individuals. To enhance the security of your application, it is recommended to employ secure credential management practices.</p><p> * <strong>Azure Key Vault</strong>: Utilize Azure Key Vault to securely store and manage your application&#x27;s passwords and other sensitive credentials. Azure Key Vault provides a centralized and highly secure location for storing secrets, keys, and certificates.</p><p> * <strong>Passwordless connections</strong>: You can provide an additional layer of security and convenience for accessing resources in Azure by eliminating the need for passwords. This way you can reduce the risk of password-related vulnerabilities, such as weak passwords or password theft.</p></div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    <tr class="issue-row" data-criticality="optional" data-targets='{&quot;azure-aks&quot;:{&quot;effort&quot;:3,&quot;severity&quot;:&quot;optional&quot;},&quot;azure-appservice&quot;:{&quot;effort&quot;:3,&quot;severity&quot;:&quot;optional&quot;},&quot;azure-container-apps&quot;:{&quot;effort&quot;:3,&quot;severity&quot;:&quot;optional&quot;}}' data-default-effort="3" data-default-severity="optional" data-rule="hardcoded-urls-00001" onclick="toggleRow('row-cloudreadiness-6', this)" style="cursor:pointer;">
+      <td style="white-space:normal;"><div class="issue-title-cell"><button class="expand-btn" id="btn-row-cloudreadiness-6">&#x276F;</button> Avoid using hardcoded URLs (HTTP protocol) in source code</div></td>
+      <td class="crit-cell"><span class="crit-label"><span class="crit-square crit-square-optional"></span>Optional</span></td>
+      <td class="sp-cell">3</td>
+    </tr>
+    <tr class="detail-row" id="row-cloudreadiness-6" style="display:none;">
+      <td colspan="3">
+        <div class="detail-content">
+          <div class="file-list">
+            <table><colgroup><col style="width:70%"/><col style="width:30%"/></colgroup>
+            <thead><tr><th>File</th><th>Position</th></tr></thead><tbody>
+            <tr><td><span class="file-path" title=".travis.yml">.travis.yml</span></td><td><span class="position">Line 18</span></td></tr>
+            <tr><td><span class="file-path" title="account-service/src/main/resources/bootstrap.yml">account-service/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            <tr><td><span class="file-path" title="auth-service/src/main/resources/bootstrap.yml">auth-service/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            <tr><td><span class="file-path" title="config/src/main/resources/shared/account-service.yml">config/src/main/resources/shared/account-service.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            <tr><td><span class="file-path" title="config/src/main/resources/shared/application.yml">config/src/main/resources/shared/application.yml</span></td><td><span class="position">Line 18</span></td></tr>
+            <tr><td><span class="file-path" title="config/src/main/resources/shared/application.yml">config/src/main/resources/shared/application.yml</span></td><td><span class="position">Line 23</span></td></tr>
+            <tr><td><span class="file-path" title="config/src/main/resources/shared/gateway.yml">config/src/main/resources/shared/gateway.yml</span></td><td><span class="position">Line 22</span></td></tr>
+            <tr><td><span class="file-path" title="config/src/main/resources/shared/notification-service.yml">config/src/main/resources/shared/notification-service.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            <tr><td><span class="file-path" title="config/src/main/resources/shared/statistics-service.yml">config/src/main/resources/shared/statistics-service.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            <tr><td><span class="file-path" title="config/src/main/resources/shared/statistics-service.yml">config/src/main/resources/shared/statistics-service.yml</span></td><td><span class="position">Line 25</span></td></tr>
+            <tr><td><span class="file-path" title="gateway/src/main/resources/bootstrap.yml">gateway/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            <tr><td><span class="file-path" title="monitoring/src/main/resources/bootstrap.yml">monitoring/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            <tr><td><span class="file-path" title="notification-service/src/main/resources/bootstrap.yml">notification-service/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            <tr><td><span class="file-path" title="registry/src/main/resources/bootstrap.yml">registry/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            <tr><td><span class="file-path" title="statistics-service/src/main/resources/bootstrap.yml">statistics-service/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            <tr><td><span class="file-path" title="statistics-service/src/test/resources/application.yml">statistics-service/src/test/resources/application.yml</span></td><td><span class="position">Line 16</span></td></tr>
+            <tr><td><span class="file-path" title="turbine-stream-service/src/main/resources/bootstrap.yml">turbine-stream-service/src/main/resources/bootstrap.yml</span></td><td><span class="position">Line 6</span></td></tr>
+            </tbody></table>
+          </div>
+          <div class="explanation-panel">
+            <h4>Explanation</h4>
+            <div><p>This patterns verifies in source code and configuration files the presence of hardcoded URLs using the HTTP protocol (HTTP/HTTPS). This URL would need to be replaced by the new resource&#x27;s URL during the Cloud migration, if any change occured.</p></div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    <tr class="issue-row" data-criticality="optional" data-targets='{&quot;azure-aks&quot;:{&quot;effort&quot;:5,&quot;severity&quot;:&quot;optional&quot;},&quot;azure-appservice&quot;:{&quot;effort&quot;:5,&quot;severity&quot;:&quot;optional&quot;},&quot;azure-container-apps&quot;:{&quot;effort&quot;:5,&quot;severity&quot;:&quot;optional&quot;}}' data-default-effort="5" data-default-severity="optional" data-rule="azure-message-queue-amqp-02000" onclick="toggleRow('row-cloudreadiness-7', this)" style="cursor:pointer;">
+      <td style="white-space:normal;"><div class="issue-title-cell"><button class="expand-btn" id="btn-row-cloudreadiness-7">&#x276F;</button> Spring AMQP dependency found</div></td>
+      <td class="crit-cell"><span class="crit-label"><span class="crit-square crit-square-optional"></span>Optional</span></td>
+      <td class="sp-cell">5</td>
+    </tr>
+    <tr class="detail-row" id="row-cloudreadiness-7" style="display:none;">
+      <td colspan="3">
+        <div class="detail-content">
+          <div class="file-list">
+            <table><colgroup><col style="width:70%"/><col style="width:30%"/></colgroup>
+            <thead><tr><th>File</th><th>Position</th></tr></thead><tbody>
+            <tr><td><span class="file-path" title="account-service/pom.xml">account-service/pom.xml</span></td><td><span class="position">Line 57</span></td></tr>
+            <tr><td><span class="file-path" title="notification-service/pom.xml">notification-service/pom.xml</span></td><td><span class="position">Line 57</span></td></tr>
+            <tr><td><span class="file-path" title="statistics-service/pom.xml">statistics-service/pom.xml</span></td><td><span class="position">Line 57</span></td></tr>
+            </tbody></table>
+          </div>
+          <div class="explanation-panel">
+            <h4>Explanation</h4>
+            <div><p>The application uses Spring AMQP dependency. To migrate a Java application that uses Spring AMQP to Azure, you can follow these recommendations:</p><p> * Provision <strong>Azure Service Bus</strong>: Use Azure Service Bus, a fully managed messaging service that offers reliable message queuing and publish/subscribe capabilities.</p><p> * Update the application&#x27;s <strong>messaging connection</strong> details: Modify the Java application&#x27;s configuration updating the connection information and message queues/topics.</p><p> * Configure Azure Service Bus <strong>queues/topics</strong>: Create appropriate queues or topics in Azure Service Bus to align with your application&#x27;s messaging requirements. Configure access control and security settings as needed.</p></div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+<div class="issue-section" data-domain="java-upgrade">
+  <h2>Java Upgrade</h2>
+  <table class="issue-table">
+    <colgroup><col class="col-issue"/><col class="col-criticality"/><col class="col-storypoint"/></colgroup>
+    <thead><tr><th>Issue Category</th><th>Criticality</th><th>Story Point</th></tr></thead>
+    <tbody>
+    <tr class="issue-row" data-criticality="mandatory" data-targets='{&quot;azure-aks&quot;:{&quot;effort&quot;:8,&quot;severity&quot;:&quot;mandatory&quot;},&quot;azure-appservice&quot;:{&quot;effort&quot;:8,&quot;severity&quot;:&quot;mandatory&quot;},&quot;azure-container-apps&quot;:{&quot;effort&quot;:8,&quot;severity&quot;:&quot;mandatory&quot;}}' data-default-effort="8" data-default-severity="mandatory" data-rule="azure-java-version-01000" onclick="toggleRow('row-javaupgrade-0', this)" style="cursor:pointer;">
+      <td style="white-space:normal;"><div class="issue-title-cell"><button class="expand-btn" id="btn-row-javaupgrade-0">&#x276F;</button> Java Version Has Reached the End of Support</div></td>
+      <td class="crit-cell"><span class="crit-label"><span class="crit-square crit-square-mandatory"></span>Mandatory</span></td>
+      <td class="sp-cell">8</td>
+    </tr>
+    <tr class="detail-row" id="row-javaupgrade-0" style="display:none;">
+      <td colspan="3">
+        <div class="detail-content">
+          <div class="file-list">
+            <table><colgroup><col style="width:70%"/><col style="width:30%"/></colgroup>
+            <thead><tr><th>File</th><th>Position</th></tr></thead><tbody>
+            <tr><td><span class="file-path" title="pom.xml">pom.xml</span></td><td><span class="position">Line 21</span></td></tr>
+            </tbody></table>
+          </div>
+          <div class="explanation-panel">
+            <h4>Explanation</h4>
+            <div><p>The application is using a Java version that has reached the end of support. It is strongly recommended to plan and execute a migration strategy to upgrade your application to a supported Java version.<br/>Supported Java versions receive long-term support (LTS) from the Java community, including bug fixes and updates. Migrating to a supported version provides you with a stable and well-maintained platform for your application.</p></div>
+          </div>
+        </div>
+      </td>
+    </tr>
+    </tbody>
+  </table>
+</div>
+</div><!-- #tab-issues -->
+<div id="tab-arch" class="tab-panel">
+  <div class="fact-content"><h1 id="architecture-diagram">Architecture Diagram</h1>
+<p>PiggyMetrics is a Spring Cloud microservices application for personal finance management, composed of multiple independently deployable services coordinated via Eureka service discovery, a Zuul API gateway, a centralized Spring Cloud Config server, and RabbitMQ as the message broker.</p>
+<h2 id="application-architecture">Application Architecture</h2>
+<div class="mermaid">
+flowchart TD
+    subgraph Client["Client Layer"]
+        Browser["Web Browser / Mobile"]
+    end
+
+    subgraph Infrastructure["Infrastructure Services"]
+        Config["Config Service\nSpring Cloud Config"]
+        Registry["Registry\nEureka Server :8761"]
+        Gateway["Gateway\nNetflix Zuul :4000"]
+        RabbitMQ["RabbitMQ\nMessage Broker"]
+        Monitoring["Monitoring\nHystrix Dashboard :9000"]
+        Turbine["Turbine Stream\n:8989"]
+    end
+
+    subgraph BusinessServices["Business Services - Spring Boot 2.0.3 / Java 8"]
+        AuthSvc["Auth Service\nOAuth2 Server :5000"]
+        AccountSvc["Account Service\nREST API"]
+        StatsSvc["Statistics Service\nREST API"]
+        NotifSvc["Notification Service\nREST API + Scheduler"]
+    end
+
+    subgraph DataLayer["Data Layer"]
+        AuthDB[("auth-mongodb\nMongoDB")]
+        AccountDB[("account-mongodb\nMongoDB")]
+        StatsDB[("statistics-mongodb\nMongoDB")]
+        NotifDB[("notification-mongodb\nMongoDB")]
+    end
+
+    subgraph External["External Services"]
+        ExchangeAPI["Exchange Rates API\nREST"]
+        SMTP["SMTP Email Server"]
+    end
+
+    Browser -->|"HTTP :80"| Gateway
+    Gateway -->|"routes /uaa/**"| AuthSvc
+    Gateway -->|"routes /accounts/**"| AccountSvc
+    Gateway -->|"routes /statistics/**"| StatsSvc
+    Gateway -->|"routes /notifications/**"| NotifSvc
+
+    Config -->|"serves config"| Registry
+    Config -->|"serves config"| Gateway
+    Config -->|"serves config"| AuthSvc
+    Config -->|"serves config"| AccountSvc
+    Config -->|"serves config"| StatsSvc
+    Config -->|"serves config"| NotifSvc
+
+    AuthSvc -->|"stores users"| AuthDB
+    AccountSvc -->|"stores accounts"| AccountDB
+    StatsSvc -->|"stores data points"| StatsDB
+    NotifSvc -->|"stores recipients"| NotifDB
+
+    AccountSvc -->|"Feign: update stats"| StatsSvc
+    AccountSvc -->|"Feign: create user"| AuthSvc
+    NotifSvc -->|"Feign: get accounts"| AccountSvc
+
+    StatsSvc -->|"Feign: exchange rates"| ExchangeAPI
+    NotifSvc -->|"JavaMail"| SMTP
+
+    AccountSvc -->|"Hystrix metrics"| RabbitMQ
+    StatsSvc -->|"Hystrix metrics"| RabbitMQ
+    NotifSvc -->|"Hystrix metrics"| RabbitMQ
+    RabbitMQ -->|"aggregates"| Turbine
+    Turbine -->|"streams to"| Monitoring
+</div>
+<h3 id="technology-stack-summary">Technology Stack Summary</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Layer</th><th>Technology</th><th>Version</th><th>Purpose</th>
+</tr></thead><tbody>
+<tr><td>API Gateway</td><td>Netflix Zuul</td><td>Spring Cloud Finchley</td><td>Route external requests to microservices</td></tr>
+<tr><td>Service Discovery</td><td>Netflix Eureka</td><td>Spring Cloud Finchley</td><td>Service registration and discovery</td></tr>
+<tr><td>Configuration</td><td>Spring Cloud Config</td><td>Finchley.RELEASE</td><td>Centralized configuration management</td></tr>
+<tr><td>Security</td><td>Spring Security OAuth2</td><td>Spring Cloud Finchley</td><td>OAuth2 authorization server and resource servers</td></tr>
+<tr><td>Business Logic</td><td>Spring Boot</td><td>2.0.3.RELEASE</td><td>REST microservices framework</td></tr>
+<tr><td>Data Access</td><td>Spring Data MongoDB</td><td>Spring Boot 2.0.3</td><td>MongoDB repositories per service</td></tr>
+<tr><td>Messaging</td><td>Spring Cloud Bus / AMQP</td><td>Finchley.RELEASE</td><td>Config refresh broadcast via RabbitMQ</td></tr>
+<tr><td>Circuit Breaker</td><td>Netflix Hystrix</td><td>Spring Cloud Finchley</td><td>Fault tolerance with fallbacks</td></tr>
+<tr><td>Service Calls</td><td>Spring Cloud OpenFeign</td><td>Finchley.RELEASE</td><td>Declarative HTTP client between services</td></tr>
+<tr><td>Distributed Tracing</td><td>Spring Cloud Sleuth</td><td>Finchley.RELEASE</td><td>Trace IDs across service calls</td></tr>
+<tr><td>Monitoring</td><td>Hystrix Dashboard + Turbine</td><td>Spring Cloud Finchley</td><td>Circuit breaker metrics aggregation</td></tr>
+<tr><td>Runtime</td><td>Java</td><td>8</td><td>JVM runtime</td></tr>
+<tr><td>Containerization</td><td>Docker / Docker Compose</td><td>2.1</td><td>Container orchestration</td></tr>
+</tbody></table></div>
+<h3 id="data-storage-external-services">Data Storage & External Services</h3>
+<p>Each business service owns a dedicated MongoDB instance (auth-mongodb, account-mongodb, statistics-mongodb, notification-mongodb), following the Database-per-Service pattern. All MongoDB instances use a shared Docker image (<code>sqshq/piggymetrics-mongodb</code>) with password-protected access. RabbitMQ serves as the message broker for Spring Cloud Bus (configuration refresh events) and Hystrix metrics streams aggregated by the Turbine Stream service. The Statistics Service consumes an external Exchange Rates REST API to normalize financial data into a common currency. The Notification Service uses JavaMail to send scheduled email notifications via an external SMTP server.</p>
+<h3 id="key-architectural-decisions">Key Architectural Decisions</h3>
+<ul>
+<li><strong>Database-per-Service pattern</strong>: Each microservice has its own dedicated MongoDB instance, ensuring loose coupling and independent scaling of data stores.</li>
+<li><strong>Centralized configuration via Spring Cloud Config</strong>: All service configurations are stored in the <code>config</code> module's <code>shared/</code> resources and served at startup, enabling environment-specific overrides without redeployment.</li>
+<li><strong>Circuit breaker pattern with Hystrix</strong>: Inter-service Feign clients are wrapped with Hystrix for fault tolerance; fallback implementations (e.g., <code>StatisticsServiceClientFallback</code>) prevent cascading failures.</li>
+</ul>
+<h2 id="component-relationships">Component Relationships</h2>
+<div class="mermaid">
+flowchart LR
+    subgraph Presentation["Presentation Layer"]
+        AccountCtrl["AccountController"]
+        StatCtrl["StatisticsController"]
+        NotifCtrl["RecipientController"]
+        UserCtrl["UserController\n(Auth)"]
+    end
+
+    subgraph Business["Business Logic"]
+        AccountSvc["AccountServiceImpl"]
+        StatsSvc["StatisticsServiceImpl"]
+        ExchangeSvc["ExchangeRatesServiceImpl"]
+        NotifSvcImpl["NotificationServiceImpl"]
+        RecipientSvc["RecipientServiceImpl"]
+        UserSvcImpl["UserServiceImpl"]
+        EmailSvc["EmailServiceImpl"]
+    end
+
+    subgraph DataAccess["Data Access"]
+        AccountRepo["AccountRepository\n(MongoDB)"]
+        DataPointRepo["DataPointRepository\n(MongoDB)"]
+        RecipientRepo["RecipientRepository\n(MongoDB)"]
+        UserRepo["UserRepository\n(MongoDB)"]
+    end
+
+    subgraph FeignClients["Feign Clients"]
+        AuthClient["AuthServiceClient"]
+        StatsClient["StatisticsServiceClient"]
+        AcctClient["AccountServiceClient\n(Notification)"]
+        RatesClient["ExchangeRatesClient"]
+    end
+
+    subgraph Config["Security / Config"]
+        AccountResSec["ResourceServerConfig\n(Account)"]
+        StatsResSec["ResourceServerConfig\n(Statistics)"]
+        NotifResSec["ResourceServerConfig\n(Notification)"]
+        OAuthCfg["OAuth2AuthorizationConfig\n(Auth)"]
+    end
+
+    AccountCtrl -->|"delegates"| AccountSvc
+    StatCtrl -->|"delegates"| StatsSvc
+    NotifCtrl -->|"delegates"| RecipientSvc
+    UserCtrl -->|"delegates"| UserSvcImpl
+
+    AccountSvc -->|"CRUD"| AccountRepo
+    AccountSvc -->|"calls"| StatsClient
+    AccountSvc -->|"calls"| AuthClient
+
+    StatsSvc -->|"CRUD"| DataPointRepo
+    StatsSvc -->|"calls"| ExchangeSvc
+    ExchangeSvc -->|"calls"| RatesClient
+
+    NotifSvcImpl -->|"reads"| RecipientSvc
+    NotifSvcImpl -->|"calls"| AcctClient
+    NotifSvcImpl -->|"sends via"| EmailSvc
+    RecipientSvc -->|"CRUD"| RecipientRepo
+
+    UserSvcImpl -->|"CRUD"| UserRepo
+
+    AccountResSec -.->|"secures"| AccountCtrl
+    StatsResSec -.->|"secures"| StatCtrl
+    NotifResSec -.->|"secures"| NotifCtrl
+    OAuthCfg -.->|"issues tokens"| UserCtrl
+</div>
+<h3 id="component-inventory">Component Inventory</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Component</th><th>Layer</th><th>Type</th><th>Responsibility</th>
+</tr></thead><tbody>
+<tr><td>AccountController</td><td>Presentation</td><td>REST Controller</td><td>Handle account CRUD and current user account endpoints</td></tr>
+<tr><td>StatisticsController</td><td>Presentation</td><td>REST Controller</td><td>Handle statistics data point retrieval and update</td></tr>
+<tr><td>RecipientController</td><td>Presentation</td><td>REST Controller</td><td>Handle notification settings retrieval and update</td></tr>
+<tr><td>UserController</td><td>Presentation</td><td>REST Controller</td><td>Handle user registration (Auth Service)</td></tr>
+<tr><td>AccountServiceImpl</td><td>Business Logic</td><td>Service</td><td>Create accounts, save changes, normalize with statistics</td></tr>
+<tr><td>StatisticsServiceImpl</td><td>Business Logic</td><td>Service</td><td>Update and retrieve statistical data points</td></tr>
+<tr><td>ExchangeRatesServiceImpl</td><td>Business Logic</td><td>Service</td><td>Fetch and cache currency exchange rates</td></tr>
+<tr><td>NotificationServiceImpl</td><td>Business Logic</td><td>Service</td><td>Scheduled notification dispatch using Feign + email</td></tr>
+<tr><td>RecipientServiceImpl</td><td>Business Logic</td><td>Service</td><td>Manage notification recipient settings</td></tr>
+<tr><td>UserServiceImpl</td><td>Business Logic</td><td>Service</td><td>Register and manage OAuth2 users</td></tr>
+<tr><td>EmailServiceImpl</td><td>Business Logic</td><td>Service</td><td>Send email notifications via JavaMail</td></tr>
+<tr><td>AccountRepository</td><td>Data Access</td><td>MongoDB Repository</td><td>Persist and query Account documents</td></tr>
+<tr><td>DataPointRepository</td><td>Data Access</td><td>MongoDB Repository</td><td>Persist and query statistical DataPoint documents</td></tr>
+<tr><td>RecipientRepository</td><td>Data Access</td><td>MongoDB Repository</td><td>Persist and query Recipient documents</td></tr>
+<tr><td>UserRepository</td><td>Data Access</td><td>MongoDB Repository</td><td>Persist and query User documents</td></tr>
+<tr><td>AuthServiceClient</td><td>Feign Client</td><td>HTTP Client</td><td>Create users in Auth Service from Account Service</td></tr>
+<tr><td>StatisticsServiceClient</td><td>Feign Client</td><td>HTTP Client</td><td>Push account updates to Statistics Service</td></tr>
+<tr><td>AccountServiceClient</td><td>Feign Client</td><td>HTTP Client</td><td>Fetch account data from Notification Service</td></tr>
+<tr><td>ExchangeRatesClient</td><td>Feign Client</td><td>HTTP Client</td><td>Retrieve exchange rates from external API</td></tr>
+<tr><td>ResourceServerConfig (x3)</td><td>Infrastructure</td><td>Security Config</td><td>Configure OAuth2 resource server rules per service</td></tr>
+<tr><td>OAuth2AuthorizationConfig</td><td>Infrastructure</td><td>Security Config</td><td>Configure OAuth2 authorization server in Auth Service</td></tr>
+</tbody></table></div></div>
+</div>
+<div id="tab-api" class="tab-panel">
+  <div class="fact-content"><h1 id="api-service-communication-contracts">API & Service Communication Contracts</h1>
+<p>PiggyMetrics exposes 10 REST API endpoints across 4 business services, all routed through a single Zuul API gateway, with inter-service communication handled exclusively via synchronous Feign clients (plus two asynchronous scheduled notification flows).</p>
+<h2 id="service-catalog">Service Catalog</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Port</th><th>Category</th><th>Purpose</th>
+</tr></thead><tbody>
+<tr><td>gateway</td><td>4000 (ext: 80)</td><td>API Layer</td><td>Netflix Zuul API gateway; routes all external traffic to business services</td></tr>
+<tr><td>auth-service</td><td>5000</td><td>Business</td><td>OAuth2 authorization server; manages user credentials and token issuance</td></tr>
+<tr><td>account-service</td><td>6000</td><td>Business</td><td>Core domain service managing user accounts, incomes, expenses, and savings</td></tr>
+<tr><td>statistics-service</td><td>7000</td><td>Business</td><td>Stores normalized financial time-series data points per account</td></tr>
+<tr><td>notification-service</td><td>8000</td><td>Business</td><td>Manages notification preferences; sends scheduled reminder and backup emails</td></tr>
+<tr><td>config</td><td>N/A (internal)</td><td>Infrastructure</td><td>Spring Cloud Config Server; serves centralized configuration to all services</td></tr>
+<tr><td>registry</td><td>8761</td><td>Infrastructure</td><td>Netflix Eureka Server; service registration and discovery</td></tr>
+<tr><td>monitoring</td><td>9000</td><td>Observability</td><td>Hystrix Dashboard; visualizes circuit breaker metrics</td></tr>
+<tr><td>turbine-stream-service</td><td>8989</td><td>Observability</td><td>Aggregates Hystrix metrics streams from RabbitMQ for the dashboard</td></tr>
+</tbody></table></div>
+<h2 id="api-endpoints-inventory">API Endpoints Inventory</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Method</th><th>Path (with context)</th><th>Request Type</th><th>Response Type</th><th>Notes</th>
+</tr></thead><tbody>
+<tr><td>auth-service</td><td>GET</td><td>/uaa/users/current</td><td>Principal (from token)</td><td>Principal (JSON)</td><td>Returns current authenticated user</td></tr>
+<tr><td>auth-service</td><td>POST</td><td>/uaa/users</td><td>User (JSON body)</td><td>200 OK</td><td>Requires scope=server; creates new user</td></tr>
+<tr><td>account-service</td><td>GET</td><td>/accounts/current</td><td>Principal (from token)</td><td>Account (JSON)</td><td>Returns current user account</td></tr>
+<tr><td>account-service</td><td>PUT</td><td>/accounts/current</td><td>Account (JSON body)</td><td>200 OK</td><td>Saves changes to current user account</td></tr>
+<tr><td>account-service</td><td>POST</td><td>/accounts/</td><td>User (JSON body)</td><td>Account (JSON)</td><td>Creates new account (and auth user)</td></tr>
+<tr><td>account-service</td><td>GET</td><td>/accounts/{name}</td><td>Path param</td><td>Account (JSON)</td><td>Requires scope=server or name=demo</td></tr>
+<tr><td>statistics-service</td><td>GET</td><td>/statistics/current</td><td>Principal (from token)</td><td>List of DataPoint (JSON)</td><td>Returns current user statistics</td></tr>
+<tr><td>statistics-service</td><td>GET</td><td>/statistics/{accountName}</td><td>Path param</td><td>List of DataPoint (JSON)</td><td>Requires scope=server or name=demo</td></tr>
+<tr><td>statistics-service</td><td>PUT</td><td>/statistics/{accountName}</td><td>Account (JSON body)</td><td>200 OK</td><td>Requires scope=server; called by account-service</td></tr>
+<tr><td>notification-service</td><td>GET</td><td>/notifications/recipients/current</td><td>Principal (from token)</td><td>Recipient (JSON)</td><td>Returns current user notification settings</td></tr>
+<tr><td>notification-service</td><td>PUT</td><td>/notifications/recipients/current</td><td>Recipient (JSON body)</td><td>Recipient (JSON)</td><td>Updates current user notification settings</td></tr>
+</tbody></table></div>
+<h2 id="management-observability-endpoints">Management & Observability Endpoints</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Endpoint</th><th>Notes</th>
+</tr></thead><tbody>
+<tr><td>account-service</td><td>/actuator/health, /actuator/info, /actuator/metrics</td><td>Spring Boot Actuator (default endpoints)</td></tr>
+<tr><td>statistics-service</td><td>/actuator/health, /actuator/info, /actuator/metrics</td><td>Spring Boot Actuator (default endpoints)</td></tr>
+<tr><td>notification-service</td><td>/actuator/health, /actuator/info, /actuator/metrics</td><td>Spring Boot Actuator (default endpoints)</td></tr>
+<tr><td>monitoring</td><td>/hystrix (port 9000)</td><td>Hystrix Dashboard UI</td></tr>
+<tr><td>turbine-stream-service</td><td>/turbine.stream (port 8989)</td><td>Turbine aggregated Hystrix metrics stream</td></tr>
+<tr><td>registry</td><td>/eureka (port 8761)</td><td>Eureka dashboard and service registry</td></tr>
+</tbody></table></div>
+<p>No custom <code>@Timed</code> or Micrometer metric registrations were detected in the source code.</p>
+<h2 id="dtos-contracts">DTOs & Contracts</h2>
+<p><strong>Service-level domain entities used as API contracts:</strong></p>
+<ul>
+<li><code>User</code> — request body for <code>POST /accounts/</code> and <code>POST /uaa/users</code>; carries username and password for account creation</li>
+<li><code>Account</code> (account-service) — full account response/request body; contains incomes, expenses, saving, and note; used as response for GET and request body for PUT</li>
+<li><code>Account</code> (statistics-service) — incoming DTO for <code>PUT /statistics/{accountName}</code>; structurally similar to account-service's Account but owned by the statistics domain</li>
+<li><code>DataPoint</code> — response element in the statistics list endpoints; represents a normalized time-series snapshot</li>
+<li><code>Recipient</code> — request/response DTO for notification preferences endpoints; contains email and notification frequency settings</li>
+<li><code>Principal</code> — standard Java security Principal; returned by <code>GET /uaa/users/current</code></li>
+</ul>
+<p>No OpenAPI/Swagger specifications, <code>.proto</code> files, or GraphQL schemas were found. No Springdoc or Springfox annotations are present. Serialization uses Spring Boot's default Jackson configuration (no custom <code>ObjectMapper</code> or serializer overrides detected). DTOs are standard POJOs (no Lombok <code>@Value</code> or Java records — not immutable).</p>
+<h2 id="communication-patterns">Communication Patterns</h2>
+<p><strong>Synchronous (Feign + Eureka):</strong></p>
+<p>All inter-service calls use Spring Cloud OpenFeign with Eureka-based service discovery (services register by logical name). Three Feign clients are defined:</p>
+<ul>
+<li><code>AuthServiceClient</code> (in account-service) → <code>POST /uaa/users</code> on auth-service; no fallback</li>
+<li><code>StatisticsServiceClient</code> (in account-service) → <code>PUT /statistics/{accountName}</code> on statistics-service; fallback <code>StatisticsServiceClientFallback</code> logs the error and silently drops the update</li>
+<li><code>AccountServiceClient</code> (in notification-service) → <code>GET /accounts/{accountName}</code> on account-service; no fallback</li>
+</ul>
+<p>Feign Hystrix integration is enabled (<code>feign.hystrix.enabled: true</code>). The global Hystrix timeout is 10 000 ms (account-service/notification-service/statistics-service shared config). The gateway has a higher timeout: <code>hystrix.command.default.execution.isolation.thread.timeoutInMilliseconds: 20000</code>. Ribbon read/connect timeouts on the gateway are both 20 000 ms.</p>
+<p><strong>Asynchronous (Scheduled):</strong></p>
+<p>Notification-service runs two <code>@Scheduled</code> jobs via Spring cron:</p>
+<ul>
+<li>Backup notification: daily at noon (<code>0 0 12 <em> </em> *</code>) — fetches account data via Feign then sends email</li>
+<li>Reminder notification: daily at midnight (<code>0 0 0 <em> </em> *</code>) — sends email without upstream call</li>
+</ul>
+<p>Both jobs dispatch email sending via <code>CompletableFuture.runAsync()</code> (fire-and-forget thread pool). Errors are logged but not retried.</p>
+<p><strong>Message Broker (Spring Cloud Bus):</strong></p>
+<p>RabbitMQ is used exclusively for Spring Cloud Bus (configuration refresh broadcasts) and Hystrix metrics streaming to Turbine. It is not used for business event messaging.</p>
+<p><strong>API Gateway:</strong></p>
+<p>Netflix Zuul routes external requests at port 80 → 4000 to backend services by path prefix. The gateway does not perform response aggregation or composition — it is a pure proxy. Each route forwards to a single backend service. The gateway registers with Eureka as a client but routes to <code>statistics-service</code>, <code>notification-service</code>, and <code>account-service</code> by logical Eureka name, while auth-service is routed by hardcoded URL (<code>http://auth-service:5000</code>).</p>
+<p><strong>Security posture:</strong></p>
+<p>All business service endpoints are protected by OAuth2 resource server validation (<code>@EnableResourceServer</code>). Tokens are validated by calling <code>GET /uaa/users/current</code> on auth-service (introspection via <code>CustomUserInfoTokenServices</code>). Fine-grained authorization uses <code>@PreAuthorize</code> with <code>#oauth2.hasScope('server')</code> for server-to-server calls. The demo account path (<code>/accounts/demo</code>, <code>/statistics/demo</code>) is accessible with user-level tokens. The root path (<code>/</code>) and <code>/demo</code> in account-service are publicly accessible. No TLS is configured at the application layer; TLS termination is expected at the infrastructure layer (not present in docker-compose). The Auth Service issues JWT-like tokens via Spring Security OAuth2 with a symmetric key (configured in <code>OAuth2AuthorizationConfig</code>).</p>
+<p><strong>Startup dependency chain:</strong></p>
+<p>Services depend on the Config service being healthy before starting (enforced in <code>docker-compose.yml</code> via <code>condition: service_healthy</code>). Config service must start before Registry, which must start before all business services and the Gateway.</p>
+<h2 id="service-technology-matrix">Service Technology Matrix</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Web Framework</th><th>Data Access</th><th>Discovery</th><th>Gateway</th><th>Actuator</th><th>Cache</th><th>Metrics Export</th>
+</tr></thead><tbody>
+<tr><td>gateway</td><td>Spring MVC + Zuul</td><td>None</td><td>Eureka Client</td><td>Yes (Zuul)</td><td>No</td><td>None</td><td>None</td></tr>
+<tr><td>auth-service</td><td>Spring MVC</td><td>Spring Data MongoDB</td><td>Eureka Client</td><td>No</td><td>No</td><td>None</td><td>None</td></tr>
+<tr><td>account-service</td><td>Spring MVC</td><td>Spring Data MongoDB</td><td>Eureka Client</td><td>No</td><td>Yes</td><td>None</td><td>Hystrix Stream</td></tr>
+<tr><td>statistics-service</td><td>Spring MVC</td><td>Spring Data MongoDB</td><td>Eureka Client</td><td>No</td><td>Yes</td><td>In-memory (Guava)</td><td>Hystrix Stream</td></tr>
+<tr><td>notification-service</td><td>Spring MVC</td><td>Spring Data MongoDB</td><td>Eureka Client</td><td>No</td><td>Yes</td><td>None</td><td>Hystrix Stream</td></tr>
+<tr><td>config</td><td>Spring MVC</td><td>None (filesystem/git)</td><td>None</td><td>No</td><td>No</td><td>None</td><td>None</td></tr>
+<tr><td>registry</td><td>Eureka Server</td><td>None</td><td>Eureka Server</td><td>No</td><td>No</td><td>None</td><td>None</td></tr>
+<tr><td>monitoring</td><td>Spring MVC</td><td>None</td><td>Eureka Client</td><td>No</td><td>No</td><td>None</td><td>None</td></tr>
+<tr><td>turbine-stream-service</td><td>Spring MVC</td><td>None</td><td>Eureka Client</td><td>No</td><td>No</td><td>None</td><td>None</td></tr>
+</tbody></table></div>
+<h2 id="service-communication-sequence">Service Communication Sequence</h2>
+<div class="mermaid">
+sequenceDiagram
+    participant Client as "Browser/Client"
+    participant GW as "Gateway :4000"
+    participant Auth as "Auth Service :5000"
+    participant Acct as "Account Service :6000"
+    participant Stats as "Statistics Service :7000"
+    participant Notif as "Notification Service :8000"
+    participant SMTP as "SMTP Server"
+
+    Note over Client,GW: Account Registration Flow
+    Client->>GW: POST /accounts/ (User credentials)
+    GW->>Acct: POST /accounts/ (User)
+    Acct->>Auth: POST /uaa/users (User) [Feign + OAuth2]
+    Auth-->>Acct: 200 OK
+    Acct-->>GW: Account (JSON)
+    GW-->>Client: 200 Account created
+
+    Note over Client,GW: Account Update Flow
+    Client->>GW: PUT /accounts/current (Account) [******
+    GW->>Acct: PUT /accounts/current (Account)
+    Acct->>Acct: Save account to MongoDB
+    Acct->>Stats: PUT /statistics/{name} (Account) [Feign async]
+    alt Statistics Service Available
+        Stats-->>Acct: 200 OK
+    else Circuit Breaker Open / Timeout
+        Acct-->>Acct: Fallback: log error, continue
+    end
+    Acct-->>GW: 200 OK
+    GW-->>Client: 200 OK
+
+    Note over Notif,SMTP: Scheduled Notification Flow (daily)
+    Notif->>Notif: @Scheduled backup/remind trigger
+    Notif->>Acct: GET /accounts/{name} [Feign]
+    Acct-->>Notif: Account JSON (backup attachment)
+    Notif->>SMTP: Send email (JavaMail SSL :465)
+    SMTP-->>Notif: Email sent
+</div></div>
+</div>
+<div id="tab-config" class="tab-panel">
+  <div class="fact-content"><h1 id="configuration-externalized-settings-inventory">Configuration & Externalized Settings Inventory</h1>
+<p>PiggyMetrics uses Spring Cloud Config as a centralized configuration server (serving classpath-based native configuration), with 9 bootstrap files pointing all services to it, and secrets injected exclusively via Docker environment variables with no dedicated secret store.</p>
+<h2 id="configuration-sources">Configuration Sources</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Source</th><th>Type</th><th>Path / Location</th><th>Notes</th>
+</tr></thead><tbody>
+<tr><td>Spring Cloud Config Server (native)</td><td>Centralized config server</td><td><code>config/src/main/resources/shared/</code></td><td>Serves all per-service YAML files from classpath; <code>profiles.active: native</code> means no Git remote</td></tr>
+<tr><td><code>config/src/main/resources/application.yml</code></td><td>Config server own config</td><td>In-module classpath</td><td>Configures HTTP Basic auth password, server port 8888, and native search location</td></tr>
+<tr><td><code>config/src/main/resources/shared/application.yml</code></td><td>Shared application config</td><td>Served to all services</td><td>Hystrix timeout, Eureka client URI, OAuth2 user-info URI, RabbitMQ host</td></tr>
+<tr><td><code>config/src/main/resources/shared/account-service.yml</code></td><td>Per-service config</td><td>Served to account-service</td><td>MongoDB connection, server port 6000, OAuth2 client, Feign+Hystrix enabled</td></tr>
+<tr><td><code>config/src/main/resources/shared/auth-service.yml</code></td><td>Per-service config</td><td>Served to auth-service</td><td>MongoDB connection, server port 5000, context-path <code>/uaa</code></td></tr>
+<tr><td><code>config/src/main/resources/shared/statistics-service.yml</code></td><td>Per-service config</td><td>Served to statistics-service</td><td>MongoDB connection, server port 7000, exchange rates URL</td></tr>
+<tr><td><code>config/src/main/resources/shared/notification-service.yml</code></td><td>Per-service config</td><td>Served to notification-service</td><td>MongoDB connection, server port 8000, SMTP config, cron expressions</td></tr>
+<tr><td><code>config/src/main/resources/shared/gateway.yml</code></td><td>Per-service config</td><td>Served to gateway</td><td>Zuul routes, Hystrix/Ribbon timeouts</td></tr>
+<tr><td><code>config/src/main/resources/shared/registry.yml</code></td><td>Per-service config</td><td>Served to registry</td><td>Eureka server port 8761</td></tr>
+<tr><td><code>config/src/main/resources/shared/turbine-stream-service.yml</code></td><td>Per-service config</td><td>Served to turbine-stream-service</td><td>(inherits shared config; no additional properties)</td></tr>
+<tr><td><code>config/src/main/resources/shared/monitoring.yml</code></td><td>Per-service config</td><td>Served to monitoring</td><td>(inherits shared config; no additional properties)</td></tr>
+<tr><td><code>{service}/src/main/resources/bootstrap.yml</code></td><td>Bootstrap config</td><td>Per-service classpath</td><td>Sets <code>spring.application.name</code>, Config Server URI (<code>http://config:8888</code>), <code>fail-fast: true</code>, and Basic Auth credentials</td></tr>
+<tr><td><code>.env</code></td><td>Environment variable file</td><td>Repository root</td><td>Docker Compose env defaults for local dev (all passwords set to <code>password</code>)</td></tr>
+<tr><td><code>docker-compose.yml</code></td><td>Container orchestration</td><td>Repository root</td><td>Defines service environment variables for production-like deployment</td></tr>
+<tr><td><code>docker-compose.dev.yml</code></td><td>Container orchestration overlay</td><td>Repository root</td><td>Dev override: builds from source, exposes extra ports for debugging</td></tr>
+</tbody></table></div>
+<p>No external Git repository, Azure App Configuration, AWS AppConfig, HashiCorp Vault, or Consul KV is used. All configuration is stored in the <code>config</code> module's classpath.</p>
+<h2 id="build-profiles">Build Profiles</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Profile</th><th>Activation</th><th>Purpose</th><th>Key Dependencies / Plugins</th>
+</tr></thead><tbody>
+<tr><td>(default)</td><td>Automatic</td><td>Standard Maven build producing JAR</td><td><code>spring-boot-maven-plugin</code> (all modules); <code>jacoco-maven-plugin</code> in auth-service</td></tr>
+<tr><td>N/A</td><td>—</td><td>No additional Maven profiles defined</td><td>No <code>-P</code> profiles declared in any <code>pom.xml</code></td></tr>
+</tbody></table></div>
+<p>The root POM and all module POMs define no additional Maven build profiles. Docker image builds are handled externally (via <code>Dockerfile</code> per service and <code>docker-compose.dev.yml</code>), not through Maven profiles.</p>
+<h2 id="runtime-profiles">Runtime Profiles</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Profile</th><th>Activation Method</th><th>Config Files / Locations</th><th>Key Overrides</th>
+</tr></thead><tbody>
+<tr><td>native</td><td><code>spring.profiles.active: native</code> in <code>config/application.yml</code></td><td><code>classpath:/shared/*.yml</code></td><td>Config Server uses filesystem/classpath instead of Git</td></tr>
+<tr><td>(no service profiles)</td><td>—</td><td>—</td><td>Business services do not declare <code>application-{profile}.yml</code> files; all config is served by the Config Server</td></tr>
+<tr><td>test</td><td>In-module <code>src/test/resources/application.yml</code> and <code>bootstrap.yml</code></td><td>Per-service test classpath</td><td>Uses <code>de.flapdoodle.embed.mongo</code> (embedded MongoDB); disables Config Server lookup (<code>spring.cloud.config.enabled: false</code>)</td></tr>
+</tbody></table></div>
+<p>No <code>@Profile</code>-annotated beans or profile-specific application property files (<code>application-dev.yml</code>, <code>application-prod.yml</code>) exist in business services — all environment-specific configuration is handled by the centralized Config Server and Docker environment variables.</p>
+<h2 id="properties-inventory">Properties Inventory</h2>
+<h3 id="shared-all-services-via-shared-application-yml">Shared (all services via <code>shared/application.yml</code>)</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Property Key</th><th>Value / Default</th><th>Source</th>
+</tr></thead><tbody>
+<tr><td><code>logging.level.org.springframework.security</code></td><td><code>INFO</code></td><td>Shared YAML</td></tr>
+<tr><td><code>hystrix.command.default.execution.isolation.thread.timeoutInMilliseconds</code></td><td><code>10000</code></td><td>Shared YAML</td></tr>
+<tr><td><code>eureka.instance.prefer-ip-address</code></td><td><code>true</code></td><td>Shared YAML</td></tr>
+<tr><td><code>eureka.client.serviceUrl.defaultZone</code></td><td><code>http://registry:8761/eureka/</code></td><td>Shared YAML</td></tr>
+<tr><td><code>security.oauth2.resource.user-info-uri</code></td><td><code>http://auth-service:5000/uaa/users/current</code></td><td>Shared YAML</td></tr>
+<tr><td><code>spring.rabbitmq.host</code></td><td><code>rabbitmq</code></td><td>Shared YAML</td></tr>
+</tbody></table></div>
+<h3 id="gateway-shared-gateway-yml">gateway (<code>shared/gateway.yml</code>)</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Property Key</th><th>Value / Default</th><th>Source</th>
+</tr></thead><tbody>
+<tr><td><code>hystrix.command.default.execution.isolation.thread.timeoutInMilliseconds</code></td><td><code>20000</code> (overrides shared)</td><td>gateway YAML</td></tr>
+<tr><td><code>ribbon.ReadTimeout</code></td><td><code>20000</code></td><td>gateway YAML</td></tr>
+<tr><td><code>ribbon.ConnectTimeout</code></td><td><code>20000</code></td><td>gateway YAML</td></tr>
+<tr><td><code>zuul.ignoredServices</code></td><td><code>*</code></td><td>gateway YAML</td></tr>
+<tr><td><code>zuul.host.connect-timeout-millis</code></td><td><code>20000</code></td><td>gateway YAML</td></tr>
+<tr><td><code>zuul.host.socket-timeout-millis</code></td><td><code>20000</code></td><td>gateway YAML</td></tr>
+<tr><td><code>zuul.routes.auth-service.path</code></td><td><code>/uaa/**</code></td><td>gateway YAML</td></tr>
+<tr><td><code>zuul.routes.auth-service.url</code></td><td><code>http://auth-service:5000</code></td><td>gateway YAML</td></tr>
+<tr><td><code>zuul.routes.account-service.path</code></td><td><code>/accounts/**</code></td><td>gateway YAML</td></tr>
+<tr><td><code>zuul.routes.account-service.serviceId</code></td><td><code>account-service</code></td><td>gateway YAML</td></tr>
+<tr><td><code>zuul.routes.statistics-service.path</code></td><td><code>/statistics/**</code></td><td>gateway YAML</td></tr>
+<tr><td><code>zuul.routes.statistics-service.serviceId</code></td><td><code>statistics-service</code></td><td>gateway YAML</td></tr>
+<tr><td><code>zuul.routes.notification-service.path</code></td><td><code>/notifications/**</code></td><td>gateway YAML</td></tr>
+<tr><td><code>zuul.routes.notification-service.serviceId</code></td><td><code>notification-service</code></td><td>gateway YAML</td></tr>
+<tr><td><code>server.port</code></td><td><code>4000</code></td><td>gateway YAML</td></tr>
+</tbody></table></div>
+<h3 id="account-service-shared-account-service-yml">account-service (<code>shared/account-service.yml</code>)</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Property Key</th><th>Value / Default</th><th>Source</th>
+</tr></thead><tbody>
+<tr><td><code>security.oauth2.client.clientId</code></td><td><code>account-service</code></td><td>account-service YAML</td></tr>
+<tr><td><code>security.oauth2.client.clientSecret</code></td><td><code>${ACCOUNT_SERVICE_PASSWORD}</code></td><td>Env var</td></tr>
+<tr><td><code>security.oauth2.client.accessTokenUri</code></td><td><code>http://auth-service:5000/uaa/oauth/token</code></td><td>account-service YAML</td></tr>
+<tr><td><code>security.oauth2.client.grant-type</code></td><td><code>client_credentials</code></td><td>account-service YAML</td></tr>
+<tr><td><code>security.oauth2.client.scope</code></td><td><code>server</code></td><td>account-service YAML</td></tr>
+<tr><td><code>spring.data.mongodb.host</code></td><td><code>account-mongodb</code></td><td>account-service YAML</td></tr>
+<tr><td><code>spring.data.mongodb.username</code></td><td><code>user</code></td><td>account-service YAML</td></tr>
+<tr><td><code>spring.data.mongodb.password</code></td><td><code>${MONGODB_PASSWORD}</code></td><td>Env var</td></tr>
+<tr><td><code>spring.data.mongodb.database</code></td><td><code>piggymetrics</code></td><td>account-service YAML</td></tr>
+<tr><td><code>spring.data.mongodb.port</code></td><td><code>27017</code></td><td>account-service YAML</td></tr>
+<tr><td><code>server.servlet.context-path</code></td><td><code>/accounts</code></td><td>account-service YAML</td></tr>
+<tr><td><code>server.port</code></td><td><code>6000</code></td><td>account-service YAML</td></tr>
+<tr><td><code>feign.hystrix.enabled</code></td><td><code>true</code></td><td>account-service YAML</td></tr>
+</tbody></table></div>
+<h3 id="auth-service-shared-auth-service-yml">auth-service (<code>shared/auth-service.yml</code>)</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Property Key</th><th>Value / Default</th><th>Source</th>
+</tr></thead><tbody>
+<tr><td><code>spring.data.mongodb.host</code></td><td><code>auth-mongodb</code></td><td>auth-service YAML</td></tr>
+<tr><td><code>spring.data.mongodb.username</code></td><td><code>user</code></td><td>auth-service YAML</td></tr>
+<tr><td><code>spring.data.mongodb.password</code></td><td><code>${MONGODB_PASSWORD}</code></td><td>Env var</td></tr>
+<tr><td><code>spring.data.mongodb.database</code></td><td><code>piggymetrics</code></td><td>auth-service YAML</td></tr>
+<tr><td><code>spring.data.mongodb.port</code></td><td><code>27017</code></td><td>auth-service YAML</td></tr>
+<tr><td><code>server.servlet.context-path</code></td><td><code>/uaa</code></td><td>auth-service YAML</td></tr>
+<tr><td><code>server.port</code></td><td><code>5000</code></td><td>auth-service YAML</td></tr>
+</tbody></table></div>
+<h3 id="statistics-service-shared-statistics-service-yml">statistics-service (<code>shared/statistics-service.yml</code>)</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Property Key</th><th>Value / Default</th><th>Source</th>
+</tr></thead><tbody>
+<tr><td><code>security.oauth2.client.clientId</code></td><td><code>statistics-service</code></td><td>statistics-service YAML</td></tr>
+<tr><td><code>security.oauth2.client.clientSecret</code></td><td><code>${STATISTICS_SERVICE_PASSWORD}</code></td><td>Env var</td></tr>
+<tr><td><code>spring.data.mongodb.host</code></td><td><code>statistics-mongodb</code></td><td>statistics-service YAML</td></tr>
+<tr><td><code>spring.data.mongodb.password</code></td><td><code>${MONGODB_PASSWORD}</code></td><td>Env var</td></tr>
+<tr><td><code>spring.data.mongodb.database</code></td><td><code>piggymetrics</code></td><td>statistics-service YAML</td></tr>
+<tr><td><code>server.servlet.context-path</code></td><td><code>/statistics</code></td><td>statistics-service YAML</td></tr>
+<tr><td><code>server.port</code></td><td><code>7000</code></td><td>statistics-service YAML</td></tr>
+<tr><td><code>rates.url</code></td><td><code>https://api.exchangeratesapi.io</code></td><td>statistics-service YAML</td></tr>
+</tbody></table></div>
+<h3 id="notification-service-shared-notification-service-yml">notification-service (<code>shared/notification-service.yml</code>)</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Property Key</th><th>Value / Default</th><th>Source</th>
+</tr></thead><tbody>
+<tr><td><code>security.oauth2.client.clientId</code></td><td><code>notification-service</code></td><td>notification-service YAML</td></tr>
+<tr><td><code>security.oauth2.client.clientSecret</code></td><td><code>${NOTIFICATION_SERVICE_PASSWORD}</code></td><td>Env var</td></tr>
+<tr><td><code>server.port</code></td><td><code>8000</code></td><td>notification-service YAML</td></tr>
+<tr><td><code>remind.cron</code></td><td><code>0 0 0 <em> </em> *</code> (midnight daily)</td><td>notification-service YAML</td></tr>
+<tr><td><code>backup.cron</code></td><td><code>0 0 12 <em> </em> *</code> (noon daily)</td><td>notification-service YAML</td></tr>
+<tr><td><code>spring.data.mongodb.host</code></td><td><code>notification-mongodb</code></td><td>notification-service YAML</td></tr>
+<tr><td><code>spring.data.mongodb.password</code></td><td><code>${MONGODB_PASSWORD}</code></td><td>Env var</td></tr>
+<tr><td><code>spring.mail.host</code></td><td><code>smtp.gmail.com</code></td><td>notification-service YAML</td></tr>
+<tr><td><code>spring.mail.port</code></td><td><code>465</code></td><td>notification-service YAML</td></tr>
+<tr><td><code>spring.mail.username</code></td><td><code>dev-user</code></td><td>notification-service YAML (hardcoded dev)</td></tr>
+<tr><td><code>spring.mail.password</code></td><td><code>dev-password</code></td><td>notification-service YAML (hardcoded dev)</td></tr>
+<tr><td><code>spring.mail.properties.mail.smtp.auth</code></td><td><code>true</code></td><td>notification-service YAML</td></tr>
+<tr><td><code>spring.mail.properties.mail.smtp.ssl.enable</code></td><td><code>true</code></td><td>notification-service YAML</td></tr>
+</tbody></table></div>
+<h3 id="config-server-own-config-config-application-yml">Config Server own config (<code>config/application.yml</code>)</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Property Key</th><th>Value / Default</th><th>Source</th>
+</tr></thead><tbody>
+<tr><td><code>spring.cloud.config.server.native.search-locations</code></td><td><code>classpath:/shared</code></td><td>config application.yml</td></tr>
+<tr><td><code>spring.profiles.active</code></td><td><code>native</code></td><td>config application.yml</td></tr>
+<tr><td><code>spring.security.user.password</code></td><td><code>${CONFIG_SERVICE_PASSWORD}</code></td><td>Env var</td></tr>
+<tr><td><code>server.port</code></td><td><code>8888</code></td><td>config application.yml</td></tr>
+</tbody></table></div>
+<h2 id="startup-parameters-resource-requirements">Startup Parameters & Resource Requirements</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>JVM Options</th><th>Exposed Port</th><th>Base Image</th><th>Memory Limit</th>
+</tr></thead><tbody>
+<tr><td>account-service</td><td><code>-Xmx200m</code></td><td>6000</td><td><code>java:8-jre</code></td><td>200 MB heap max</td></tr>
+<tr><td>auth-service</td><td>(no Dockerfile in repo; inferred)</td><td>5000</td><td><code>java:8-jre</code></td><td>Not specified</td></tr>
+<tr><td>statistics-service</td><td>(no Dockerfile in repo; inferred)</td><td>7000</td><td><code>java:8-jre</code></td><td>Not specified</td></tr>
+<tr><td>notification-service</td><td><code>-Xmx200m</code></td><td>8000</td><td><code>java:8-jre</code></td><td>200 MB heap max</td></tr>
+<tr><td>gateway</td><td>(no Dockerfile in repo; inferred)</td><td>4000</td><td><code>java:8-jre</code></td><td>Not specified</td></tr>
+<tr><td>config</td><td>(no Dockerfile in repo; inferred)</td><td>8888</td><td><code>java:8-jre</code></td><td>Not specified</td></tr>
+<tr><td>registry</td><td><code>-Xmx200m</code></td><td>8761</td><td><code>java:8-jre</code></td><td>200 MB heap max</td></tr>
+<tr><td>turbine-stream-service</td><td><code>-Xmx200m</code></td><td>8989</td><td><code>java:8-jre</code></td><td>200 MB heap max</td></tr>
+<tr><td>monitoring</td><td>(no Dockerfile in repo; inferred)</td><td>9000</td><td><code>java:8-jre</code></td><td>Not specified</td></tr>
+<tr><td>auth-mongodb / account-mongodb / statistics-mongodb / notification-mongodb</td><td>N/A</td><td>27017</td><td><code>mongo:3</code></td><td>Not specified</td></tr>
+<tr><td>rabbitmq</td><td>N/A</td><td>15672</td><td><code>rabbitmq:3-management</code></td><td>Not specified</td></tr>
+</tbody></table></div>
+<p>No Kubernetes resource requests/limits or Docker <code>mem_limit</code> directives are configured. Instance count is 1 per service (no horizontal scaling configured in Docker Compose). No <code>-Xms</code> settings are defined.</p>
+<h2 id="startup-dependency-chain">Startup Dependency Chain</h2>
+<p>Services must start in the following order (enforced by Docker Compose <code>depends_on</code> with <code>condition: service_healthy</code>):</p>
+<ol>
+<li><strong>RabbitMQ</strong> — no dependencies; must start first (message broker for Spring Cloud Bus and Hystrix streams)</li>
+<li><strong>Config Service</strong> — no dependencies; must be healthy before any other service</li>
+<li><strong>Registry</strong> — depends on Config (healthy); provides Eureka server for service registration</li>
+<li><strong>Gateway</strong> — depends on Config (healthy)</li>
+<li><strong>Auth Service</strong> — depends on Config (healthy); business services cannot authenticate without it</li>
+<li><strong>Account Service</strong> — depends on Config (healthy); registers with Eureka, connects to Auth Service</li>
+<li><strong>Statistics Service</strong> — depends on Config (healthy); registers with Eureka</li>
+<li><strong>Notification Service</strong> — depends on Config (healthy); registers with Eureka</li>
+<li><strong>Monitoring</strong> — depends on Config (healthy)</li>
+<li><strong>Turbine Stream Service</strong> — depends on Config (healthy); connects to RabbitMQ for Hystrix streams</li>
+</ol>
+<p>All business service bootstrap files set <code>spring.cloud.config.fail-fast: true</code> — services will fail to start if the Config Server is unreachable. No <code>dockerize</code> wait-for-TCP or Spring Retry config is explicitly set beyond <code>fail-fast</code>. The Config Server healthcheck is the only inter-service readiness gate in Docker Compose.</p>
+<h2 id="secrets-sensitive-configuration">Secrets & Sensitive Configuration</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Secret Reference</th><th>Type</th><th>Storage</th>
+</tr></thead><tbody>
+<tr><td><code>${CONFIG_SERVICE_PASSWORD}</code></td><td>Config Server HTTP Basic password</td><td>Environment variable (Docker Compose / <code>.env</code>)</td></tr>
+<tr><td><code>${MONGODB_PASSWORD}</code></td><td>MongoDB database password (all 4 instances)</td><td>Environment variable (Docker Compose / <code>.env</code>)</td></tr>
+<tr><td><code>${ACCOUNT_SERVICE_PASSWORD}</code></td><td>OAuth2 client secret for account-service</td><td>Environment variable (Docker Compose / <code>.env</code>)</td></tr>
+<tr><td><code>${STATISTICS_SERVICE_PASSWORD}</code></td><td>OAuth2 client secret for statistics-service</td><td>Environment variable (Docker Compose / <code>.env</code>)</td></tr>
+<tr><td><code>${NOTIFICATION_SERVICE_PASSWORD}</code></td><td>OAuth2 client secret for notification-service</td><td>Environment variable (Docker Compose / <code>.env</code>)</td></tr>
+<tr><td><code>spring.mail.username</code></td><td>SMTP username</td><td>Hardcoded <code>dev-user</code> in <code>notification-service.yml</code></td></tr>
+<tr><td><code>spring.mail.password</code></td><td>SMTP password</td><td>Hardcoded <code>dev-password</code> in <code>notification-service.yml</code></td></tr>
+<tr><td>OAuth2 token signing key</td><td>JWT/token signing</td><td>In-memory <code>InMemoryTokenStore</code> — not persisted, lost on auth-service restart</td></tr>
+</tbody></table></div>
+<h3 id="secrets-provisioning-workflow">Secrets Provisioning Workflow</h3>
+<p>All secrets are passed as plain-text Docker environment variables. The <code>.env</code> file in the repository root provides default values (<code>password</code>) for local development. For production deployments, operators are expected to override these environment variables at container runtime.</p>
+<p><strong>Flow:</strong></p>
+<ol>
+<li>Operator sets environment variables (<code>CONFIG_SERVICE_PASSWORD</code>, <code>MONGODB_PASSWORD</code>, <code>ACCOUNT_SERVICE_PASSWORD</code>, <code>STATISTICS_SERVICE_PASSWORD</code>, <code>NOTIFICATION_SERVICE_PASSWORD</code>) before running <code>docker-compose up</code></li>
+<li>Docker Compose injects them into each container's environment</li>
+<li>Spring Boot reads them via <code>${ENV_VAR}</code> placeholder resolution in YAML files served by the Config Server</li>
+<li>The Config Server's own password is read from <code>${CONFIG_SERVICE_PASSWORD}</code> in its <code>application.yml</code>; business services pass this same password in their <code>bootstrap.yml</code> to authenticate with the Config Server</li>
+</ol>
+<p><strong>Risks:</strong> No dedicated secret store (no Vault, no KMS, no Kubernetes Secrets). SMTP credentials are hardcoded in the shared config file (not parameterized). The <code>.env</code> file with default passwords (<code>password</code>) is committed to the repository. OAuth2 tokens are stored only in memory — all active sessions are invalidated when auth-service restarts. <code>NoOpPasswordEncoder</code> is used for OAuth2 client secrets in <code>OAuth2AuthorizationConfig</code>, meaning client secrets are compared in plain text.</p>
+<h2 id="feature-flags">Feature Flags</h2>
+<p>No feature flag framework (LaunchDarkly, Unleash, Spring Feature Flags, or <code>.NET FeatureManagement</code>) is used. No <code>@ConditionalOnProperty</code> or <code>@ConditionalOnExpression</code> beans are declared. No A/B testing or gradual rollout configuration is present.</p>
+<div class="table-wrap"><table><thead><tr>
+<th>Flag Name</th><th>Default</th><th>Controlled By</th>
+</tr></thead><tbody>
+<tr><td><code>feign.hystrix.enabled</code></td><td><code>true</code> (account-service)</td><td><code>shared/account-service.yml</code></td></tr>
+<tr><td>N/A</td><td>—</td><td>No other feature-flag-like properties detected</td></tr>
+</tbody></table></div>
+<h2 id="framework-runtime-versions">Framework & Runtime Versions</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Component</th><th>Version</th><th>Source</th>
+</tr></thead><tbody>
+<tr><td>Java</td><td>8 (target)</td><td>Root <code>pom.xml</code> <code><java.version>1.8</java.version></code></td></tr>
+<tr><td>Spring Boot</td><td>2.0.3.RELEASE</td><td>Root <code>pom.xml</code> parent</td></tr>
+<tr><td>Spring Cloud</td><td>Finchley.RELEASE</td><td>Root <code>pom.xml</code> BOM import</td></tr>
+<tr><td>Spring Security OAuth2</td><td>Finchley (managed)</td><td>BOM</td></tr>
+<tr><td>Spring Data MongoDB</td><td>2.0.x (managed by Spring Boot BOM)</td><td>BOM</td></tr>
+<tr><td>Spring Cloud Config Server/Client</td><td>Finchley</td><td>BOM</td></tr>
+<tr><td>Netflix Eureka Server/Client</td><td>Finchley</td><td>BOM</td></tr>
+<tr><td>Netflix Zuul</td><td>Finchley</td><td>BOM</td></tr>
+<tr><td>Netflix Hystrix</td><td>Finchley</td><td>BOM</td></tr>
+<tr><td>Netflix Turbine Stream</td><td>Finchley</td><td>BOM</td></tr>
+<tr><td>Spring Cloud Sleuth</td><td>Finchley</td><td>BOM</td></tr>
+<tr><td>Spring Cloud Bus (AMQP)</td><td>Finchley</td><td>BOM</td></tr>
+<tr><td>Spring Cloud OpenFeign</td><td>Finchley</td><td>BOM</td></tr>
+<tr><td>Guava</td><td>19.0</td><td><code>statistics-service/pom.xml</code> explicit</td></tr>
+<tr><td>de.flapdoodle.embed.mongo</td><td>1.50.3</td><td>Per-service <code>pom.xml</code> (test scope)</td></tr>
+<tr><td>Maven</td><td>Not pinned (wrapper not present)</td><td>Build tool</td></tr>
+<tr><td>Docker base image (services)</td><td><code>java:8-jre</code></td><td>Per-service <code>Dockerfile</code></td></tr>
+<tr><td>Docker base image (MongoDB)</td><td><code>mongo:3</code></td><td><code>mongodb/Dockerfile</code></td></tr>
+<tr><td>Docker Compose format</td><td><code>2.1</code></td><td><code>docker-compose.yml</code></td></tr>
+</tbody></table></div></div>
+</div>
+<div id="tab-workflows" class="tab-panel">
+  <div class="fact-content"><h1 id="core-business-workflows">Core Business Workflows</h1>
+<p>PiggyMetrics is a personal finance management application that allows users to track incomes, expenses, and savings goals, view normalized financial statistics over time, and receive scheduled email reminders and account backup notifications.</p>
+<h2 id="domain-entities">Domain Entities</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Entity</th><th>Service / Bounded Context</th><th>Description</th><th>Key Relationships</th>
+</tr></thead><tbody>
+<tr><td>Account</td><td>Account Management</td><td>Central aggregate representing a user's financial profile including incomes, expenses, and savings plan</td><td>Contains a list of income Items, a list of expense Items, and one Saving; identified by username</td></tr>
+<tr><td>Item</td><td>Account Management</td><td>A single income or expense line item with a title, amount, currency, time period, and icon</td><td>Embedded subdocument of Account; many Items per Account</td></tr>
+<tr><td>Saving</td><td>Account Management</td><td>Savings goal state: current saved amount, currency, interest rate, deposit and capitalization flags</td><td>Embedded in Account; one Saving per Account</td></tr>
+<tr><td>User</td><td>Identity / Auth</td><td>OAuth2 principal representing a registered user; used for authentication and token issuance</td><td>Created alongside an Account; stored in auth-service's own MongoDB</td></tr>
+<tr><td>DataPoint</td><td>Statistics</td><td>A daily snapshot of a user's financial state normalized to USD/day; represents one point on the time-series chart</td><td>Identified by composite key (accountName + date); contains normalized income and expense metrics plus currency exchange rates</td></tr>
+<tr><td>ItemMetric</td><td>Statistics</td><td>Normalized representation of an income or expense item (USD base, daily period) within a DataPoint</td><td>Embedded in DataPoint; derived from Account's Item list</td></tr>
+<tr><td>Recipient</td><td>Notification</td><td>A user's notification preferences: email address and scheduled notification settings (backup and remind)</td><td>Identified by accountName; contains a map of NotificationSettings keyed by NotificationType</td></tr>
+<tr><td>NotificationSettings</td><td>Notification</td><td>Per-notification-type settings: active flag, frequency (weekly/monthly/quarterly), and last-notified date</td><td>Embedded in Recipient as a Map value</td></tr>
+</tbody></table></div>
+<h2 id="service-to-domain-mapping">Service-to-Domain Mapping</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Domain Context</th><th>Owned Entities</th><th>External Dependencies</th>
+</tr></thead><tbody>
+<tr><td>account-service</td><td>Account Management</td><td>Account, Item (embedded), Saving (embedded)</td><td>auth-service (create user via Feign), statistics-service (push snapshot via Feign)</td></tr>
+<tr><td>auth-service</td><td>Identity & Access</td><td>User (OAuth2 credentials)</td><td>None (source of truth for authentication)</td></tr>
+<tr><td>statistics-service</td><td>Financial Statistics</td><td>DataPoint, ItemMetric (embedded), DataPointId</td><td>External Exchange Rates API (Feign, for currency normalization)</td></tr>
+<tr><td>notification-service</td><td>Notification Management</td><td>Recipient, NotificationSettings (embedded)</td><td>account-service (fetch account JSON for backup attachment via Feign)</td></tr>
+</tbody></table></div>
+<h2 id="primary-workflows">Primary Workflows</h2>
+<h3 id="workflow-1-user-registration-and-account-creation">Workflow 1: User Registration and Account Creation</h3>
+<p>A new user registers by submitting credentials to the gateway. The account-service atomically creates an account record in its MongoDB and then calls auth-service to register the OAuth2 user. No rollback mechanism exists: if auth-service user creation fails after the Account is already saved, the two databases become inconsistent.</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Client sends <code>POST /accounts/</code> with <code>User</code> credentials (username + password) via the gateway</li>
+<li>gateway routes to account-service</li>
+<li>account-service validates that the username is not already taken (<code>repository.findByName</code> must return null)</li>
+<li>account-service persists a new <code>Account</code> document with zeroed-out Saving (USD, 0 amount, 0 interest, no deposit, no capitalization)</li>
+<li>account-service calls auth-service <code>POST /uaa/users</code> via Feign (using client-credentials OAuth2 token) to register the OAuth2 principal</li>
+<li>account-service returns the newly created Account</li>
+</ol>
+<h3 id="workflow-2-account-update-with-statistics-propagation">Workflow 2: Account Update with Statistics Propagation</h3>
+<p>When a user saves budget changes, account-service persists the update and then asynchronously pushes a normalized snapshot to statistics-service. If statistics-service is unavailable, the account update still succeeds (circuit breaker fallback silently drops the statistics update).</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Authenticated user sends <code>PUT /accounts/current</code> with the updated Account payload</li>
+<li>gateway routes to account-service</li>
+<li>account-service loads the existing Account by username; fails if not found</li>
+<li>account-service replaces the incomes, expenses, saving, and note fields; updates <code>lastSeen</code> timestamp</li>
+<li>account-service persists the updated Account to MongoDB</li>
+<li>account-service calls statistics-service <code>PUT /statistics/{name}</code> via Feign with the updated Account</li>
+</ol>
+<ul>
+<li>If statistics-service responds: DataPoint is created/updated (see Workflow 3)</li>
+<li>If Hystrix circuit breaker is open or timeout (10 s) exceeded: <code>StatisticsServiceClientFallback</code> logs the error; the account update succeeds regardless</li>
+</ul>
+<h3 id="workflow-3-financial-statistics-snapshot-creation">Workflow 3: Financial Statistics Snapshot Creation</h3>
+<p>Triggered by an account-service push, statistics-service normalizes income and expense items to a common currency (USD) and a common time period (daily), then persists or replaces the DataPoint for the current day.</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>statistics-service receives <code>PUT /statistics/{accountName}</code> with an Account payload</li>
+<li>statistics-service fetches current exchange rates (USD/EUR/RUB) from the in-memory cache; if stale (date differs from today), fetches from external Exchange Rates API</li>
+<li>For each income and expense Item, normalizes amount: convert to USD using exchange rate, then divide by <code>TimePeriod.getBaseRatio()</code> to reduce to a daily figure</li>
+<li>Computes three aggregate <code>StatisticMetric</code> values: <code>INCOMES_AMOUNT</code>, <code>EXPENSES_AMOUNT</code>, <code>SAVING_AMOUNT</code> (saving also converted to USD)</li>
+<li>Creates a <code>DataPoint</code> with <code>DataPointId(accountName, today)</code> — this upserts the day's snapshot (one DataPoint per account per calendar day)</li>
+<li>Persists to MongoDB <code>datapoints</code> collection and returns</li>
+</ol>
+<h3 id="workflow-4-scheduled-notification-dispatch">Workflow 4: Scheduled Notification Dispatch</h3>
+<p>Two cron-triggered workflows run daily in notification-service to remind users who have not logged in recently (REMIND) or to send them an account data backup by email (BACKUP).</p>
+<p><strong>Remind notifications (daily midnight):</strong></p>
+<ol>
+<li><code>@Scheduled</code> triggers <code>sendRemindNotifications()</code></li>
+<li>Queries MongoDB for all <code>Recipient</code> records where REMIND notification is active and <code>lastNotified</code> is older than the recipient's configured frequency (weekly/monthly/quarterly) — using a MongoDB <code>$where</code> server-side JavaScript query</li>
+<li>For each qualifying recipient, sends a reminder email via JavaMail (SSL, port 465) asynchronously using <code>CompletableFuture.runAsync()</code></li>
+<li>On success: marks recipient as notified (updates <code>lastNotified</code> to now)</li>
+<li>On error: logs the error; no retry; recipient's <code>lastNotified</code> is not updated (will be retried next scheduled run)</li>
+</ol>
+<p><strong>Backup notifications (daily noon):</strong></p>
+<ol>
+<li><code>@Scheduled</code> triggers <code>sendBackupNotifications()</code></li>
+<li>Queries MongoDB for all <code>Recipient</code> records where BACKUP notification is due (same frequency logic as REMIND)</li>
+<li>For each qualifying recipient, fetches the account JSON via <code>AccountServiceClient.getAccount(accountName)</code> (Feign call to account-service)</li>
+<li>Sends email with account JSON attached as <code>backup.json</code> asynchronously</li>
+<li>On success: marks recipient as notified</li>
+<li>On error: logs the error; no retry</li>
+</ol>
+<h3 id="workflow-5-notification-preferences-management">Workflow 5: Notification Preferences Management</h3>
+<p>A user can opt-in to email notifications and configure their frequency at any time.</p>
+<p><strong>Steps:</strong></p>
+<ol>
+<li>Authenticated user sends <code>PUT /notifications/recipients/current</code> with a <code>Recipient</code> payload (email, notification types active/inactive, frequency)</li>
+<li>notification-service sets <code>accountName</code> from the JWT principal</li>
+<li>For any <code>NotificationSettings</code> entry where <code>lastNotified</code> is null (newly activated), sets <code>lastNotified</code> to the current date — ensuring the next notification fires after the configured frequency rather than immediately</li>
+<li>Persists the <code>Recipient</code> document and returns it</li>
+</ol>
+<h2 id="cross-service-data-flows">Cross-Service Data Flows</h2>
+<p><strong>Account → Statistics (push on save):</strong></p>
+<p>When an account is updated, account-service pushes the entire Account payload to statistics-service via a synchronous Feign PUT call. statistics-service is the only consumer of this data and derives its own normalized domain model (ItemMetric, DataPoint) from it. Account-service does not read statistics data. If the statistics-service call fails (circuit breaker open, timeout), account-service logs the error via <code>StatisticsServiceClientFallback</code> and continues — the account is saved but the statistics snapshot for that day may be missing or stale.</p>
+<p><strong>Account ← Notification (pull for backup):</strong></p>
+<p>The notification-service backup job calls account-service's <code>GET /accounts/{accountName}</code> endpoint for each recipient due for a backup notification and uses the returned JSON directly as the email attachment. There is no fallback: if account-service is unavailable, the <code>CompletableFuture</code> catches the Throwable and logs it; that recipient's backup email is skipped for that day (no retry). The <code>lastNotified</code> timestamp is not updated, so the next scheduled run will attempt again.</p>
+<p><strong>Account → Auth (create user on registration):</strong></p>
+<p>During account creation, account-service calls auth-service's <code>POST /uaa/users</code> via Feign to register the new OAuth2 principal. There is no fallback or compensating transaction: if the auth-service call fails after the account document has been persisted, the Account exists in account-mongodb without a matching User in auth-mongodb, leaving the user unable to authenticate. This is a known consistency gap.</p>
+<h2 id="business-workflow-sequence">Business Workflow Sequence</h2>
+<div class="mermaid">
+sequenceDiagram
+    participant User as "User (Browser)"
+    participant GW as "Gateway :4000"
+    participant Acct as "Account Service"
+    participant Auth as "Auth Service"
+    participant Stats as "Statistics Service"
+    participant ExAPI as "Exchange Rates API"
+    participant Notif as "Notification Service"
+    participant SMTP as "Email (SMTP)"
+
+    Note over User,Auth: Registration Flow
+    User->>GW: POST /accounts/ (username + password)
+    GW->>Acct: POST /accounts/ (User)
+    Acct->>Acct: Check username not taken
+    Acct->>Acct: Create Account with zeroed Saving
+    Acct->>Auth: POST /uaa/users (User credentials)
+    Auth-->>Acct: 200 OK
+    Acct-->>GW: Account created
+    GW-->>User: 200 Account
+
+    Note over User,Stats: Budget Update + Statistics Propagation
+    User->>GW: PUT /accounts/current (Account payload)
+    GW->>Acct: PUT /accounts/current
+    Acct->>Acct: Load existing account
+    Acct->>Acct: Replace incomes, expenses, saving, note
+    Acct->>Acct: Persist updated Account
+    Acct->>Stats: PUT /statistics/name (Account) [Feign]
+    alt Statistics Service Available
+        Stats->>Stats: Normalize items to USD/day
+        Stats->>ExAPI: GET /latest?base=USD (if rates stale)
+        ExAPI-->>Stats: Exchange rates
+        Stats->>Stats: Compute INCOMES, EXPENSES, SAVING amounts
+        Stats->>Stats: Upsert DataPoint for today
+        Stats-->>Acct: 200 OK
+    else Circuit Breaker Open or Timeout
+        Note over Acct: Fallback: log error, statistics snapshot skipped
+    end
+    Acct-->>GW: 200 OK
+    GW-->>User: 200 OK
+
+    Note over Notif,SMTP: Daily Backup Notification (noon)
+    Notif->>Notif: Scheduled trigger (noon cron)
+    Notif->>Notif: Query overdue BACKUP recipients
+    Notif->>Acct: GET /accounts/name [Feign]
+    Acct-->>Notif: Account JSON
+    Notif->>SMTP: Send backup email with attachment
+    SMTP-->>Notif: Email delivered
+    Notif->>Notif: Mark recipient notified (update lastNotified)
+</div>
+<h2 id="business-rules-decision-logic">Business Rules & Decision Logic</h2>
+<p><strong>Validation Rules:</strong></p>
+<ul>
+<li><code>Account.name</code>: must not be null; must be unique across all accounts (enforced in application layer via <code>findByName</code> check before save)</li>
+<li><code>Account.note</code>: maximum 20 000 characters (<code>@Length(max=20000)</code>)</li>
+<li><code>Item.title</code>: 1–20 characters; not null</li>
+<li><code>Item.amount</code>: not null; positive <code>BigDecimal</code></li>
+<li><code>Item.currency</code>: must be one of <code>USD</code>, <code>EUR</code>, <code>RUB</code>; not null</li>
+<li><code>Item.period</code>: must be one of <code>YEAR</code>, <code>QUARTER</code>, <code>MONTH</code>, <code>DAY</code>, <code>HOUR</code>; not null</li>
+<li><code>User.username</code>: 3–20 characters; not null</li>
+<li><code>User.password</code>: 6–40 characters; not null</li>
+<li><code>Recipient.email</code>: valid email format (<code>@Email</code>); not null</li>
+<li><code>NotificationSettings.active</code>: not null; <code>NotificationSettings.frequency</code>: must resolve to one of <code>WEEKLY(7)</code>, <code>MONTHLY(30)</code>, <code>QUARTERLY(90)</code> days</li>
+</ul>
+<p><strong>Decision Logic:</strong></p>
+<ul>
+<li><strong>Statistics normalization</strong>: Each Item amount is converted from its declared currency to USD using the daily exchange rate, then divided by the time period's base ratio (normalization to a daily figure). Saving amount is converted to USD for the <code>SAVING_AMOUNT</code> metric.</li>
+<li><strong>Exchange rate staleness check</strong>: Exchange rates are considered stale if <code>container.getDate()</code> differs from <code>LocalDate.now()</code>. A stale cache triggers a Feign call to the external API; fresh rates are served from the in-memory field (single JVM, not distributed).</li>
+<li><strong>DataPoint upsert by date</strong>: Each account gets at most one DataPoint per calendar day. Saving with the same <code>DataPointId(accountName, today)</code> overwrites the previous snapshot (MongoDB document replace).</li>
+<li><strong>Notification eligibility</strong>: A <code>Recipient</code> is eligible for notification if <code>active = true</code> AND <code>lastNotified < now - frequencyInDays</code>. Evaluated by MongoDB server-side JavaScript in <code>$where</code> clauses.</li>
+<li><strong>Notification frequency</strong>: Three values — <code>WEEKLY</code> (7 days), <code>MONTHLY</code> (30 days), <code>QUARTERLY</code> (90 days). The <code>Frequency.withDays(int)</code> factory method enforces that only these three discrete values are accepted.</li>
+</ul>
+<p><strong>State Transitions:</strong></p>
+<ul>
+<li><strong>Account</strong>: Created (zeroed Saving, no items) → Updated (any number of income/expense items + Saving changes); no deletion workflow. <code>lastSeen</code> is updated on every save.</li>
+<li><strong>Recipient</strong>: Created on first notification settings save; <code>lastNotified</code> is initialized to now for any newly activated notification type (preventing immediate first-run notification). Subsequently updated after each successful email dispatch.</li>
+</ul>
+<p><strong>Constraints:</strong></p>
+<ul>
+<li>Account username is the MongoDB <code>@Id</code> — uniqueness is enforced by MongoDB's primary key constraint; duplicate registration is checked at the application layer before insert.</li>
+<li>OAuth2 tokens are stored in-memory in auth-service; all active sessions are invalidated if auth-service restarts.</li>
+<li>OAuth2 client secrets for service-to-service communication (<code>account-service</code>, <code>statistics-service</code>, <code>notification-service</code>) are stored using <code>NoOpPasswordEncoder</code> — compared as plain text, not hashed.</li>
+</ul>
+<p><strong>Transactions:</strong></p>
+<ul>
+<li>No <code>@Transactional</code> annotations are used in any service. MongoDB operations are single-document and inherently atomic within each service. Cross-service operations (account save + statistics update, account create + user create) are not wrapped in any distributed transaction or saga — failures result in partial state without automatic compensation.</li>
+</ul>
+<p><strong>Error Handling:</strong></p>
+<ul>
+<li><code>StatisticsServiceClientFallback</code>: silently logs the error when statistics-service is unavailable; no retry, no dead-letter queue.</li>
+<li>Notification errors: caught via <code>CompletableFuture</code> exception handling; logged only; no retry queue.</li>
+<li>Account creation without auth user: no compensating delete of the Account document if the auth-service Feign call fails.</li>
+</ul>
+<p><strong>Authorization:</strong></p>
+<ul>
+<li><code>GET /accounts/{name}</code> and <code>GET /statistics/{accountName}</code>: require <code>oauth2.scope=server</code> OR the path variable equals <code>'demo'</code> (demo account accessible to all authenticated users). Enforced with <code>@PreAuthorize</code>.</li>
+<li><code>PUT /statistics/{accountName}</code>: requires <code>oauth2.scope=server</code> (server-to-server only). Enforced with <code>@PreAuthorize</code>.</li>
+<li><code>POST /uaa/users</code>: requires <code>oauth2.scope=server</code> (called only by account-service using client credentials). Enforced with <code>@PreAuthorize</code>.</li>
+<li>All other authenticated endpoints: require a valid user-level OAuth2 token; <code>Principal</code> is extracted from the security context.</li>
+</ul></div>
+</div>
+<div id="tab-deps" class="tab-panel">
+  <div class="fact-content"><h1 id="dependency-map">Dependency Map</h1>
+<p>PiggyMetrics is a Spring Cloud microservices application (Java 8, Spring Boot 2.0.3, Spring Cloud Finchley.RELEASE) comprising 9 modules with a total of approximately 25 unique external production dependencies shared across all modules.</p>
+<h2 id="dependencies">Dependencies</h2>
+<div class="mermaid">
+flowchart LR
+    App["PiggyMetrics\nMulti-Module"]
+
+    subgraph Web["Web Frameworks"]
+        SpringWeb["Spring Boot Web\n2.0.3"]
+        SpringFeign["Spring Cloud OpenFeign\nFinchley"]
+        SpringZuul["Spring Cloud Netflix Zuul\nFinchley"]
+    end
+
+    subgraph DB["Database / ORM"]
+        SpringMongo["Spring Data MongoDB\n2.0.x"]
+    end
+
+    subgraph Messaging["Messaging"]
+        SpringBusAMQP["Spring Cloud Bus AMQP\nFinchley"]
+        SpringStreamRabbit["Spring Cloud Stream Rabbit\nFinchley"]
+        HystrixStream["Spring Cloud Netflix\nHystrix Stream - Finchley"]
+        TurbineStream["Spring Cloud Netflix\nTurbine Stream - Finchley"]
+    end
+
+    subgraph Sec["Security"]
+        SpringSecOAuth2["Spring Cloud OAuth2\nFinchley"]
+        SpringSecurity["Spring Security\n5.0.x"]
+    end
+
+    subgraph Obs["Observability"]
+        SpringActuator["Spring Boot Actuator\n2.0.3"]
+        SpringSleuth["Spring Cloud Sleuth\nFinchley"]
+        HystrixDashboard["Hystrix Dashboard\nFinchley"]
+    end
+
+    subgraph Infra["Infrastructure / Cloud"]
+        EurekaClient["Eureka Client\nFinchley"]
+        EurekaServer["Eureka Server\nFinchley"]
+        ConfigServer["Spring Cloud Config Server\nFinchley"]
+        ConfigClient["Spring Cloud Config Client\nFinchley"]
+        SpringHystrix["Spring Cloud Netflix Hystrix\nFinchley"]
+    end
+
+    subgraph Util["Utilities"]
+        Guava["Guava 19.0"]
+        SpringMail["Spring Boot Mail\n2.0.3"]
+    end
+
+    App -->|"web / REST"| Web
+    App -->|"persistence"| DB
+    App -->|"messaging"| Messaging
+    App -->|"security"| Sec
+    App -->|"observability"| Obs
+    App -->|"cloud infra"| Infra
+    App -->|"utilities"| Util
+</div>
+<h3 id="dependency-summary">Dependency Summary</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Category</th><th>Count</th><th>Key Libraries</th><th>Notes</th>
+</tr></thead><tbody>
+<tr><td>Web Frameworks</td><td>3</td><td>Spring Boot Web 2.0.3, Spring Cloud OpenFeign Finchley, Netflix Zuul Finchley</td><td>Zuul 1.x is in maintenance mode; Zuul 2 or Spring Cloud Gateway preferred</td></tr>
+<tr><td>Database / ORM</td><td>1</td><td>Spring Data MongoDB 2.0.x</td><td>Each service has its own MongoDB instance</td></tr>
+<tr><td>Messaging</td><td>4</td><td>Spring Cloud Bus AMQP, Spring Cloud Stream Rabbit, Hystrix Stream, Turbine Stream</td><td>All Finchley-vintage; Spring Cloud Bus used for config refresh</td></tr>
+<tr><td>Security</td><td>2</td><td>Spring Cloud OAuth2 Finchley, Spring Security 5.0.x</td><td>Spring Cloud OAuth2 Finchley is deprecated; migrate to Spring Authorization Server</td></tr>
+<tr><td>Observability</td><td>3</td><td>Spring Boot Actuator 2.0.3, Spring Cloud Sleuth Finchley, Hystrix Dashboard</td><td>Hystrix is now in maintenance mode; Micrometer/OTel preferred</td></tr>
+<tr><td>Infrastructure</td><td>5</td><td>Eureka Client/Server, Config Server/Client, Netflix Hystrix</td><td>Netflix OSS stack (Finchley) is largely deprecated</td></tr>
+<tr><td>Utilities</td><td>2</td><td>Guava 19.0, Spring Boot Mail 2.0.3</td><td>Guava 19.0 is very old (2016); current is 33.x</td></tr>
+</tbody></table></div>
+<h3 id="version-compatibility-risks">Version & Compatibility Risks</h3>
+<p>Spring Boot 2.0.3.RELEASE and Spring Cloud Finchley.RELEASE are both end-of-life. Spring Boot 2.0.x reached end of support in 2019 and Spring Cloud Finchley in 2020. The entire Netflix OSS stack (Eureka, Hystrix, Zuul, Ribbon, Turbine) has been placed in maintenance mode by Netflix and is deprecated in modern Spring Cloud releases — Zuul 1.x should be replaced with Spring Cloud Gateway, Hystrix with Resilience4j, and the Spring Cloud Netflix Eureka client remains supported but the associated streaming/turbine infrastructure does not. <code>spring-cloud-starter-oauth2</code> (Finchley) is replaced by <code>spring-security-oauth2-authorization-server</code> and Spring Security 6.x. Guava 19.0 (released 2016) is significantly outdated and has known security advisories in some transitive paths.</p>
+<h3 id="notable-observations">Notable Observations</h3>
+<ul>
+<li><strong>Full Netflix OSS stack adoption</strong>: The application uses Zuul, Hystrix, Ribbon, Eureka, and Turbine — all of which are in maintenance mode and not supported in Spring Cloud 2022.x+. A migration to Spring Cloud Gateway, Resilience4j, and Spring Boot 3.x would require replacing every Netflix component.</li>
+<li><strong>Spring Boot 2.0.3 is critically outdated</strong>: This version predates many security patches. The current LTS is Spring Boot 3.3.x (requiring Java 17+). The Java 8 baseline further limits upgrade options.</li>
+<li><strong>Spring Cloud OAuth2 (Finchley) deprecated</strong>: The <code>spring-cloud-starter-oauth2</code> artifact has been removed from modern Spring Cloud releases; migration to Spring Authorization Server 1.x and Spring Security 6.x is required.</li>
+<li><strong>No caching library</strong>: There is no Redis, EhCache, or Caffeine dependency declared. The exchange rates service uses Guava for in-memory caching (application-level), which is not suitable for distributed deployments.</li>
+</ul>
+<h2 id="test-dependencies">Test Dependencies</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Framework</th><th>Version</th><th>Scope</th><th>Notes</th>
+</tr></thead><tbody>
+<tr><td>Spring Boot Test</td><td>2.0.3</td><td>test</td><td>All services; includes JUnit 4, Mockito, AssertJ</td></tr>
+<tr><td>de.flapdoodle.embed.mongo</td><td>1.50.3</td><td>test</td><td>Embedded MongoDB for integration tests</td></tr>
+<tr><td>json-path (Jayway)</td><td>2.2.0</td><td>test</td><td>JSON assertions in MockMvc tests</td></tr>
+</tbody></table></div>
+<p>Total test-scope dependencies: 3 unique artifacts (used across multiple modules)</p>
+<p>Test infrastructure is minimal: services rely on embedded MongoDB (<code>de.flapdoodle.embed.mongo</code>) for repository-layer testing and <code>spring-boot-starter-test</code> (which bundles JUnit 4, Mockito, and AssertJ) for unit and slice tests. There are no contract-testing libraries (e.g., Spring Cloud Contract, Pact), no testcontainers, and no dedicated integration test framework — this limits test coverage of inter-service communication and end-to-end flows.</p></div>
+</div>
+<div id="tab-data" class="tab-panel">
+  <div class="fact-content"><h1 id="data-architecture-persistence-layer">Data Architecture & Persistence Layer</h1>
+<p>PiggyMetrics uses Spring Data MongoDB as the ORM framework across all four business services, each with its own dedicated MongoDB instance storing 5 primary document collections: <code>accounts</code>, <code>datapoints</code>, <code>recipients</code>, <code>users</code>, and OAuth2 token store.</p>
+<h2 id="database-configuration">Database Configuration</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>DB Type</th><th>Profile</th><th>Connection</th><th>Migration Tool</th><th>Schema Management</th>
+</tr></thead><tbody>
+<tr><td>account-service</td><td>MongoDB</td><td>all</td><td>account-mongodb:27017, db: piggymetrics</td><td>None</td><td>No migration tool; MongoDB is schema-less</td></tr>
+<tr><td>auth-service</td><td>MongoDB</td><td>all</td><td>auth-mongodb:27017, db: piggymetrics</td><td>None</td><td>No migration tool; MongoDB is schema-less</td></tr>
+<tr><td>statistics-service</td><td>MongoDB</td><td>all</td><td>statistics-mongodb:27017, db: piggymetrics</td><td>None</td><td>No migration tool; MongoDB is schema-less</td></tr>
+<tr><td>notification-service</td><td>MongoDB</td><td>all</td><td>notification-mongodb:27017, db: piggymetrics</td><td>None</td><td>No migration tool; MongoDB is schema-less</td></tr>
+<tr><td>account-service (test)</td><td>Embedded MongoDB (flapdoodle)</td><td>test</td><td>In-memory</td><td>None</td><td>Schema-less; seed via <code>account-service-dump.js</code></td></tr>
+<tr><td>auth-service (test)</td><td>Embedded MongoDB (flapdoodle)</td><td>test</td><td>In-memory</td><td>None</td><td>Schema-less</td></tr>
+<tr><td>statistics-service (test)</td><td>Embedded MongoDB (flapdoodle)</td><td>test</td><td>In-memory</td><td>None</td><td>Schema-less</td></tr>
+<tr><td>notification-service (test)</td><td>Embedded MongoDB (flapdoodle)</td><td>test</td><td>In-memory</td><td>None</td><td>Schema-less</td></tr>
+</tbody></table></div>
+<p>No Flyway, Liquibase, or any other migration tool is configured. Schema evolution is handled implicitly by MongoDB's schema-less nature. The <code>account-service-dump.js</code> seed file is loaded into <code>account-mongodb</code> at container startup via the Docker image entrypoint.</p>
+<h2 id="data-ownership-per-service">Data Ownership per Service</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Collection(s) Owned</th><th>ORM Framework</th><th>Caching</th><th>Notes</th>
+</tr></thead><tbody>
+<tr><td>account-service</td><td><code>accounts</code></td><td>Spring Data MongoDB (CrudRepository)</td><td>None</td><td><code>Account</code> document is the core domain aggregate; <code>Item</code> and <code>Saving</code> are embedded subdocuments</td></tr>
+<tr><td>auth-service</td><td><code>users</code> (+ OAuth2 token store in-memory)</td><td>Spring Data MongoDB (CrudRepository)</td><td>None</td><td><code>User</code> implements <code>UserDetails</code>; OAuth2 tokens are stored in-memory (not persisted)</td></tr>
+<tr><td>statistics-service</td><td><code>datapoints</code></td><td>Spring Data MongoDB (CrudRepository)</td><td>In-memory (Guava ImmutableMap)</td><td><code>DataPoint</code> uses a composite <code>DataPointId</code> (account + date) as <code>@Id</code>; exchange rates cached in service-layer field</td></tr>
+<tr><td>notification-service</td><td><code>recipients</code></td><td>Spring Data MongoDB (CrudRepository)</td><td>None</td><td><code>Recipient</code> embeds a <code>Map</code> of <code>NotificationSettings</code> keyed by <code>NotificationType</code> enum</td></tr>
+</tbody></table></div>
+<h2 id="entity-model">Entity Model</h2>
+<div class="mermaid">
+erDiagram
+    Account ||--o{ Item : "has incomes"
+    Account ||--o{ Item : "has expenses"
+    Account ||--|| Saving : "has"
+
+    DataPoint ||--o{ ItemMetric : "has incomes"
+    DataPoint ||--o{ ItemMetric : "has expenses"
+    DataPoint }o--|| DataPointId : "identified by"
+
+    Recipient ||--o{ NotificationSettings : "has scheduled"
+
+    Account {
+        string name PK
+        date lastSeen
+        string note
+    }
+    Item {
+        string title
+        decimal amount
+        string currency
+        string period
+        string icon
+    }
+    Saving {
+        decimal amount
+        string currency
+        decimal interest
+        boolean deposit
+        boolean capitalization
+    }
+    DataPoint {
+        string account PK
+        date date PK
+        map statistics
+        map rates
+    }
+    DataPointId {
+        string account
+        date date
+    }
+    ItemMetric {
+        string title
+        decimal amount
+    }
+    User {
+        string username PK
+        string password
+    }
+    Recipient {
+        string accountName PK
+        string email
+    }
+    NotificationSettings {
+        boolean active
+        string frequency
+        date lastNotified
+    }
+</div>
+<h2 id="key-repository-methods">Key Repository Methods</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Repository</th><th>Notable Methods</th><th>Purpose</th>
+</tr></thead><tbody>
+<tr><td>account-service</td><td><code>AccountRepository extends CrudRepository<Account, String></code></td><td><code>findByName(String name)</code></td><td>Look up account by username (the document <code>@Id</code>)</td></tr>
+<tr><td>statistics-service</td><td><code>DataPointRepository extends CrudRepository<DataPoint, DataPointId></code></td><td><code>findByIdAccount(String account)</code></td><td>Retrieve all time-series data points for a given account name</td></tr>
+<tr><td>notification-service</td><td><code>RecipientRepository extends CrudRepository<Recipient, String></code></td><td><code>findByAccountName(String name)</code></td><td>Look up notification settings by account name</td></tr>
+<tr><td>notification-service</td><td><code>RecipientRepository</code></td><td><code>findReadyForBackup()</code> — raw <code>@Query</code></td><td>MongoDB <code>$where</code> JavaScript expression: finds recipients with BACKUP notification active and overdue based on frequency</td></tr>
+<tr><td>notification-service</td><td><code>RecipientRepository</code></td><td><code>findReadyForRemind()</code> — raw <code>@Query</code></td><td>MongoDB <code>$where</code> JavaScript expression: finds recipients with REMIND notification active and overdue based on frequency</td></tr>
+<tr><td>auth-service</td><td><code>UserRepository extends CrudRepository<User, String></code></td><td>Standard CRUD only</td><td>User lookup by username (used by <code>MongoUserDetailsService</code>)</td></tr>
+</tbody></table></div>
+<p>The <code>findReadyForBackup()</code> and <code>findReadyForRemind()</code> queries use MongoDB server-side JavaScript (<code>$where</code>) to compare dates against notification frequency — a pattern that is deprecated in MongoDB 4.4+ and incompatible with Atlas serverless deployments.</p>
+<h2 id="caching-strategy">Caching Strategy</h2>
+<div class="table-wrap"><table><thead><tr>
+<th>Service</th><th>Cache Provider</th><th>Scope</th><th>TTL / Eviction</th><th>Pattern</th><th>Rationale</th>
+</tr></thead><tbody>
+<tr><td>statistics-service</td><td>In-memory field (Guava <code>ImmutableMap</code>)</td><td>Single JVM instance</td><td>Refreshed once per calendar day (date comparison against <code>LocalDate.now()</code>)</td><td>Cache-aside: miss triggers Feign call to external exchange rates API, result stored in <code>ExchangeRatesServiceImpl.container</code> field</td><td>Exchange rates change at most daily; avoids repeated external API calls</td></tr>
+</tbody></table></div>
+<p>No Spring Cache (<code>@Cacheable</code>), Redis, EhCache, or Caffeine is used. The caching is a plain service-layer field (<code>ExchangeRatesContainer container</code>) with a date-based staleness check. This approach is not thread-safe under concurrent requests and is lost on service restart — not suitable for horizontally scaled deployments.</p>
+<h2 id="data-ownership-boundaries">Data Ownership Boundaries</h2>
+<p><strong>Isolated data stores (Database-per-Service pattern):</strong> Each business service has its own dedicated MongoDB container (<code>auth-mongodb</code>, <code>account-mongodb</code>, <code>statistics-mongodb</code>, <code>notification-mongodb</code>). There is no shared database and no direct cross-database access — services communicate only via REST APIs (Feign clients).</p>
+<p><strong>Cross-service data access:</strong> The <code>notification-service</code> reads account data via <code>AccountServiceClient.getAccount(accountName)</code> (Feign REST call to account-service) to produce email backup attachments. It does not read directly from <code>account-mongodb</code>. The <code>account-service</code> pushes denormalized account data to <code>statistics-service</code> via <code>StatisticsServiceClient.updateStatistics(name, account)</code> after each save — statistics data is never read back by account-service.</p>
+<p><strong>Write pattern:</strong> All services follow a simple write pattern — no CQRS, no event sourcing. Updates are synchronous: the account-service directly writes to its MongoDB and then makes a synchronous Feign call to statistics-service to propagate the change.</p>
+<p><strong>Read pattern:</strong> Data retrieval is per-service: each service reads only from its own MongoDB collection. Cross-service aggregation is not performed at the data layer; the gateway proxies requests to individual services without composing their responses.</p>
+<h3 id="data-classification-sensitivity">Data Classification & Sensitivity</h3>
+<div class="table-wrap"><table><thead><tr>
+<th>Entity</th><th>Collection</th><th>Sensitive Fields</th><th>Classification</th><th>Controls in Place</th>
+</tr></thead><tbody>
+<tr><td>User (auth-service)</td><td><code>users</code></td><td><code>password</code></td><td>PII + Credential</td><td>Password is BCrypt-hashed via Spring Security's <code>UserDetailsService</code>; no encryption-at-rest configured for MongoDB</td></tr>
+<tr><td>Account (account-service)</td><td><code>accounts</code></td><td><code>name</code> (username as PK), <code>note</code> (free text, up to 20 000 chars)</td><td>PII</td><td>No encryption-at-rest; no field-level masking; MongoDB connection is password-protected but not TLS-encrypted</td></tr>
+<tr><td>Recipient (notification-service)</td><td><code>recipients</code></td><td><code>email</code></td><td>PII</td><td>No encryption-at-rest; no field-level masking; email stored in plain text</td></tr>
+<tr><td>Item / Saving (account-service)</td><td>embedded in <code>accounts</code></td><td><code>amount</code>, <code>currency</code> (financial data)</td><td>Financial</td><td>No encryption-at-rest; financial amounts stored as plain <code>BigDecimal</code></td></tr>
+<tr><td>DataPoint (statistics-service)</td><td><code>datapoints</code></td><td>Financial aggregates (<code>statistics</code>, <code>rates</code> maps)</td><td>Financial</td><td>No encryption-at-rest</td></tr>
+</tbody></table></div>
+<p><strong>Summary:</strong> The application stores PII (username, email) and sensitive financial data without encryption-at-rest on MongoDB. Passwords are the only protected field (BCrypt hashing). No data masking, field-level encryption, or access audit logging is configured. MongoDB instances are password-protected but communications between services and databases are not TLS-encrypted (plain connections within Docker network).</p></div>
+</div>
+<p class="footer">Your feedback is invaluable &mdash; <a href="https://aka.ms/ghcp-appmod/feedback">Share feedback</a></p>
+<script>
+function toggleRow(rowId, triggerRow) {
+  var detail = document.getElementById(rowId);
+  var btn = document.getElementById('btn-' + rowId);
+  if (!detail) return;
+  var visible = detail.style.display !== 'none';
+  detail.style.display = visible ? 'none' : 'table-row';
+  if (btn) btn.classList.toggle('open', !visible);
+}
+(function() {
+  var nav = document.querySelector('.tab-nav');
+  if (!nav) return;
+  nav.addEventListener('click', function(e) {
+    var btn = e.target.closest('.tab-btn');
+    if (!btn) return;
+    var targetId = btn.getAttribute('data-tab');
+    document.querySelectorAll('.tab-btn').forEach(function(b) { b.classList.remove('active'); });
+    document.querySelectorAll('.tab-panel').forEach(function(p) { p.classList.remove('active'); });
+    btn.classList.add('active');
+    var panel = document.getElementById(targetId);
+    if (panel) {
+      panel.classList.add('active');
+      if (window.__mermaidReady) { window.__renderMermaidIn(panel); }
+    }
+  });
+})();
+
+// ── Diagram lightbox ────────────────────────────────────────
+(function() {
+  var lightbox = document.getElementById('diagram-lightbox');
+  var inner = document.getElementById('diagram-lightbox-inner');
+  var closeBtn = document.getElementById('diagram-lightbox-close');
+  if (!lightbox || !inner || !closeBtn) return;
+
+  var scale = 1;
+  var translateX = 0;
+  var translateY = 0;
+  var isDragging = false;
+  var dragStartX = 0;
+  var dragStartY = 0;
+
+  function applyTransform() {
+    var svg = inner.querySelector('svg');
+    if (svg) {
+      svg.style.transform = 'translate(' + translateX + 'px, ' + translateY + 'px) scale(' + scale + ')';
+      svg.style.transformOrigin = 'center center';
+      svg.style.transition = 'none';
+    }
+  }
+
+  function resetTransform() {
+    scale = 1; translateX = 0; translateY = 0;
+    applyTransform();
+  }
+
+  function openLightbox(svgEl) {
+    inner.innerHTML = svgEl.outerHTML;
+    var injected = inner.querySelector('svg');
+    if (injected) {
+      injected.removeAttribute('width');
+      injected.removeAttribute('height');
+      injected.style.cursor = 'grab';
+    }
+    resetTransform();
+    lightbox.classList.add('open');
+    document.body.style.overflow = 'hidden';
+  }
+
+  function closeLightbox() {
+    lightbox.classList.remove('open');
+    inner.innerHTML = '';
+    document.body.style.overflow = '';
+    resetTransform();
+  }
+
+  inner.addEventListener('wheel', function(e) {
+    e.preventDefault();
+    var delta = e.deltaY > 0 ? 0.9 : 1.1;
+    scale = Math.min(Math.max(scale * delta, 0.3), 8);
+    applyTransform();
+  }, { passive: false });
+
+  inner.addEventListener('mousedown', function(e) {
+    if (e.button !== 0) return;
+    isDragging = true;
+    dragStartX = e.clientX - translateX;
+    dragStartY = e.clientY - translateY;
+    var svg = inner.querySelector('svg');
+    if (svg) { svg.style.cursor = 'grabbing'; }
+    e.preventDefault();
+  });
+
+  document.addEventListener('mousemove', function(e) {
+    if (!isDragging) return;
+    translateX = e.clientX - dragStartX;
+    translateY = e.clientY - dragStartY;
+    applyTransform();
+  });
+
+  document.addEventListener('mouseup', function() {
+    if (!isDragging) return;
+    isDragging = false;
+    var svg = inner.querySelector('svg');
+    if (svg) { svg.style.cursor = 'grab'; }
+  });
+
+  inner.addEventListener('dblclick', function() { resetTransform(); });
+
+  document.addEventListener('click', function(e) {
+    var card = e.target.closest('.mermaid');
+    if (!card) return;
+    if (e.target.closest('.diagram-lightbox-close')) return;
+    var svg = card.querySelector('svg');
+    if (svg) { openLightbox(svg); }
+  });
+
+  closeBtn.addEventListener('click', closeLightbox);
+
+  lightbox.addEventListener('click', function(e) {
+    if (e.target === lightbox) { closeLightbox(); }
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') { closeLightbox(); }
+  });
+})();
+
+var _currentTarget = '';
+
+function toggleMultiSelect(id) {
+  var el = document.getElementById(id);
+  if (!el) return;
+  document.querySelectorAll('.multi-select.open').forEach(function(ms) { if (ms.id !== id) ms.classList.remove('open'); });
+  el.classList.toggle('open');
+}
+
+document.addEventListener('click', function(e) {
+  if (!e.target.closest('.multi-select')) {
+    document.querySelectorAll('.multi-select.open').forEach(function(ms) { ms.classList.remove('open'); });
+  }
+});
+
+function getMultiSelectValues(msId) {
+  var el = document.getElementById(msId);
+  if (!el) return [];
+  var checked = el.querySelectorAll('input[type=checkbox]:checked');
+  var vals = [];
+  for (var i = 0; i < checked.length; i++) vals.push(checked[i].value);
+  return vals;
+}
+
+function onMultiSelectChange(msId, label) {
+  var el = document.getElementById(msId);
+  if (!el) return;
+  var vals = getMultiSelectValues(msId);
+  var total = el.querySelectorAll('input[type=checkbox]').length;
+  var btn = el.querySelector('.multi-select-btn');
+  if (btn) {
+    btn.textContent = vals.length > 0 && vals.length < total ? label + ' (' + vals.length + ')' : label;
+  }
+  applyFilters();
+}
+
+function applyFilters() {
+  var selectedDomains = getMultiSelectValues('domain-ms');
+  var selectedCrits = getMultiSelectValues('criticality-ms');
+
+  var sections = document.querySelectorAll('.issue-section');
+  for (var i = 0; i < sections.length; i++) {
+    var domain = sections[i].getAttribute('data-domain');
+    sections[i].style.display = (selectedDomains.length === 0 || selectedDomains.indexOf(domain) >= 0) ? '' : 'none';
+  }
+
+  var rows = document.querySelectorAll('.issue-row');
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    var section = row.closest('.issue-section');
+    if (section && section.style.display === 'none') {
+      row.style.display = 'none';
+      var next = row.nextElementSibling;
+      if (next && next.classList.contains('detail-row')) next.style.display = 'none';
+      continue;
+    }
+
+    var show = true;
+    if (_currentTarget && row.hasAttribute('data-targets')) {
+      var targetsStr = row.getAttribute('data-targets');
+      if (targetsStr && targetsStr !== '{}') {
+        try {
+          var targets = JSON.parse(targetsStr);
+          if (Object.keys(targets).length > 0 && !targets[_currentTarget]) {
+            show = false;
+          }
+        } catch(e) {}
+      }
+    }
+
+    if (show && selectedCrits.length > 0) {
+      var crit = row.getAttribute('data-criticality');
+      if (selectedCrits.indexOf(crit) < 0) show = false;
+    }
+
+    row.style.display = show ? '' : 'none';
+    var nextRow = row.nextElementSibling;
+    if (nextRow && nextRow.classList.contains('detail-row')) {
+      if (!show) nextRow.style.display = 'none';
+    }
+  }
+}
+
+function clearAllFilters() {
+  document.querySelectorAll('.multi-select input[type=checkbox]').forEach(function(cb) { cb.checked = false; });
+  var domainBtn = document.querySelector('#domain-ms .multi-select-btn');
+  if (domainBtn) domainBtn.textContent = 'Domain';
+  var critBtn = document.querySelector('#criticality-ms .multi-select-btn');
+  if (critBtn) critBtn.textContent = 'Criticality';
+  applyFilters();
+}
+
+function onTargetChange(targetId) {
+  _currentTarget = targetId;
+  var rows = document.querySelectorAll('.issue-row[data-targets]');
+  var totalEffort = 0;
+  var domainCrits = {};
+
+  for (var i = 0; i < rows.length; i++) {
+    var row = rows[i];
+    var targets = JSON.parse(row.getAttribute('data-targets'));
+    var section = row.closest('.issue-section');
+    var domain = section ? section.getAttribute('data-domain') : '';
+
+    if (!targets || Object.keys(targets).length === 0) {
+      var sp = parseFloat(row.querySelector('.sp-cell').textContent) || 0;
+      totalEffort += sp;
+      if (!domainCrits[domain]) domainCrits[domain] = {mandatory:0,potential:0,optional:0};
+      var crit = row.getAttribute('data-criticality') || 'optional';
+      domainCrits[domain][crit] = (domainCrits[domain][crit] || 0) + 1;
+      continue;
+    }
+
+    var override = targets[targetId];
+    if (!override) {
+      continue;
+    }
+
+    var newSeverity = (override.severity || row.getAttribute('data-default-severity') || '').toLowerCase();
+    row.setAttribute('data-criticality', newSeverity);
+    var critCell = row.querySelector('.crit-cell');
+    if (critCell) {
+      var critText = newSeverity === 'mandatory' ? 'Mandatory' : newSeverity === 'potential' ? 'Potential' : 'Optional';
+      var cssClass = newSeverity === 'mandatory' ? 'crit-square-mandatory' : newSeverity === 'potential' ? 'crit-square-potential' : 'crit-square-optional';
+      critCell.innerHTML = '<span class="crit-label"><span class="crit-square ' + cssClass + '"></span>' + critText + '</span>';
+    }
+
+    var newEffort = override.effort !== undefined ? override.effort : parseFloat(row.getAttribute('data-default-effort')) || 0;
+    var spCell = row.querySelector('.sp-cell');
+    if (spCell) spCell.textContent = newEffort;
+    totalEffort += newEffort;
+
+    if (!domainCrits[domain]) domainCrits[domain] = {mandatory:0,potential:0,optional:0};
+    domainCrits[domain][newSeverity] = (domainCrits[domain][newSeverity] || 0) + 1;
+  }
+
+  var secSection = document.querySelector('.issue-section[data-domain="security"]');
+  if (secSection) {
+    var secRows = secSection.querySelectorAll('.issue-row');
+    for (var j = 0; j < secRows.length; j++) {
+      if (!secRows[j].hasAttribute('data-targets') || secRows[j].getAttribute('data-targets') === '') {
+        var sp = parseFloat(secRows[j].querySelector('.sp-cell').textContent) || 0;
+        totalEffort += sp;
+        if (!domainCrits['security']) domainCrits['security'] = {mandatory:0,potential:0,optional:0};
+        var sc = secRows[j].getAttribute('data-criticality') || 'optional';
+        domainCrits['security'][sc] = (domainCrits['security'][sc] || 0) + 1;
+      }
+    }
+  }
+
+  var label = totalEffort < 20 ? 'S' : totalEffort < 50 ? 'M' : totalEffort < 100 ? 'L' : 'XL';
+  var effortEl = document.getElementById('effort-display');
+  if (effortEl) effortEl.textContent = label + ' (total story points: ' + totalEffort + ')';
+
+  updateDonuts(domainCrits);
+  applyFilters();
+}
+
+function updateDonuts(domainCrits) {
+  var container = document.getElementById('donut-container');
+  if (!container) return;
+  container.innerHTML = '';
+  var domainNames = {'cloud-readiness':'Cloud Readiness','java-upgrade':'Java Upgrade','dotnet-upgrade':'DotNET Upgrade','security':'Security'};
+  var domainOrder = ['cloud-readiness','java-upgrade','dotnet-upgrade','security'];
+  for (var d = 0; d < domainOrder.length; d++) {
+    var key = domainOrder[d];
+    var c = domainCrits[key];
+    if (!c || (c.mandatory + c.potential + c.optional) === 0) continue;
+    var total = c.mandatory + c.potential + c.optional;
+    var div = document.createElement('div');
+    div.className = 'domain-summary-item';
+    div.innerHTML = buildDonutSvg(c.mandatory, c.potential, c.optional) +
+      '<h3>' + domainNames[key] + '</h3>' +
+      '<div class="count">' + total + ' issue' + (total !== 1 ? 's' : '') + '</div>';
+    container.appendChild(div);
+  }
+}
+
+function buildDonutSvg(m, p, o) {
+  var total = m + p + o;
+  if (total === 0) return '<svg viewBox="0 0 100 100" width="100" height="100" style="display:block;margin:0 auto;"><circle cx="50" cy="50" r="35" fill="none" stroke="#d0d7de" stroke-width="15" opacity="0.5"/></svg>';
+  var r = 35, circ = 2 * Math.PI * r, offset = 0;
+  var svg = '<svg viewBox="0 0 100 100" width="100" height="100" style="display:block;margin:0 auto;transform:rotate(-90deg);">';
+  var segs = [{c:m,color:'var(--color-mandatory)'},{c:p,color:'var(--color-potential)'},{c:o,color:'var(--color-optional)'}];
+  for (var i = 0; i < segs.length; i++) {
+    if (segs[i].c === 0) continue;
+    var segLen = (segs[i].c / total) * circ;
+    var gap = total > segs[i].c ? 1.5 : 0;
+    var drawLen = Math.max(segLen - gap, 0.5);
+    svg += '<circle cx="50" cy="50" r="' + r + '" fill="none" stroke="' + segs[i].color + '" stroke-width="15" stroke-dasharray="' + drawLen.toFixed(2) + ' ' + circ.toFixed(2) + '" stroke-dashoffset="' + (-offset).toFixed(2) + '"/>';
+    offset += segLen;
+  }
+  svg += '</svg>';
+  return svg;
+}
+</script>
+<script>document.addEventListener('DOMContentLoaded', function() { onTargetChange('azure-aks'); });</script>
+</div></body></html>
